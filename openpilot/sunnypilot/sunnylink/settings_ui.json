@@ -1019,6 +1019,154 @@
               ]
             }
           ]
+        },
+        {
+          "id": "carrot_navi",
+          "title": "CarrotMan Navigation (TMAP / Kakao)",
+          "description": "Receive speed camera, section enforcement, speed bump and road speed limit data from the CarrotMan app on a phone connected to the same Wi-Fi/hotspot as the device, and slow down for them. Ported from CarrotPilot.",
+          "items": [
+            {
+              "key": "CarrotNavi",
+              "widget": "toggle",
+              "title": "Enable CarrotMan Navigation",
+              "description": "Start the CarrotMan bridge (UDP 7705/7706, TCP 7712, HTTP 7713). Approaching cameras are shown as an alert. Speed control requires sunnypilot longitudinal control.",
+              "sub_items": [
+                {
+                  "key": "CarrotNaviSpeedCtrlMode",
+                  "widget": "multiple_button",
+                  "title": "Slow Down For",
+                  "options": [
+                    {
+                      "value": 0,
+                      "label": "Alerts Only"
+                    },
+                    {
+                      "value": 1,
+                      "label": "Cameras"
+                    },
+                    {
+                      "value": 2,
+                      "label": "+ Bumps"
+                    },
+                    {
+                      "value": 3,
+                      "label": "+ Mobile Cams"
+                    }
+                  ],
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CarrotNaviSafetyFactor",
+                  "widget": "option",
+                  "title": "Camera Speed Factor",
+                  "description": "Target speed at cameras is the camera limit times this percentage.",
+                  "min": 80,
+                  "max": 120,
+                  "step": 1,
+                  "unit": "%",
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CarrotNaviSpeedCtrlEnd",
+                  "widget": "option",
+                  "title": "Reach Target Before Camera",
+                  "description": "Reach the camera speed this many seconds before the camera.",
+                  "min": 3,
+                  "max": 20,
+                  "step": 1,
+                  "unit": "second",
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CarrotNaviDecelRate",
+                  "widget": "option",
+                  "title": "Deceleration Rate",
+                  "description": "Deceleration used for the approach profile, in 0.01 m/s\u00b2. 120 = 1.2 m/s\u00b2. Lower starts braking earlier.",
+                  "min": 50,
+                  "max": 300,
+                  "step": 10,
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CarrotNaviBumpSpeed",
+                  "widget": "option",
+                  "title": "Speed Bump Speed",
+                  "min": 10,
+                  "max": 100,
+                  "step": 5,
+                  "unit": "km/h",
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CarrotNaviRoadLimitOffset",
+                  "widget": "option",
+                  "title": "Follow Road Speed Limit",
+                  "description": "-1 = off. Otherwise cap the speed at the navigation road speed limit plus this offset.",
+                  "min": -1,
+                  "max": 100,
+                  "step": 1,
+                  "unit": {
+                    "metric": "km/h",
+                    "imperial": "mph"
+                  },
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                },
+                {
+                  "key": "CarrotNaviTurnSpeed",
+                  "widget": "option",
+                  "title": "Turn Speed",
+                  "description": "0 = off. Slow down to this speed for turns announced by the navigation route.",
+                  "min": 0,
+                  "max": 100,
+                  "step": 5,
+                  "unit": "km/h",
+                  "enablement": [
+                    {
+                      "type": "param",
+                      "key": "CarrotNavi",
+                      "equals": true
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
