@@ -196,6 +196,18 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
   aTarget @5 :Float32;
   events @6 :List(OnroadEventSP.Event);
   e2eAlerts @7 :E2eAlerts;
+  carrotNavi @8 :CarrotNavi;
+
+  struct CarrotNavi {
+    enabled @0 :Bool;
+    active @1 :Bool;          # currently limiting the target speed
+    vTarget @2 :Float32;      # m/s
+    source @3 :Text;
+    spdType @4 :Int32;
+    spdLimit @5 :Int32;
+    spdDist @6 :Int32;
+    sdiDescr @7 :Text;
+  }
 
   struct DynamicExperimentalControl {
     state @0 :DynamicExperimentalControlState;
@@ -292,6 +304,7 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
     sccVision @1;
     sccMap @2;
     speedLimitAssist @3;
+    carrotNavi @4;
   }
 
   struct E2eAlerts {
@@ -344,6 +357,7 @@ struct OnroadEventSP @0xda96579883444c35 {
     speedLimitChanged @21;
     speedLimitPending @22;
     e2eChime @23;
+    carrotNaviCamera @24;
   }
 }
 
@@ -458,7 +472,28 @@ struct ModelDataV2SP @0xa1680744031fdb2d {
   }
 }
 
-struct CustomReserved10 @0xcb9fd56c7057593a {
+struct CarrotManSP @0xcb9fd56c7057593a {
+  # CarrotMan navigation bridge (ported from CarrotPilot), see openpilot/sunnypilot/carrot
+  active @0 :Int32;           # 0 none, 1 app connected, 2 guidance, 3 camera decel, 4 section, 5 bump
+  connected @1 :Bool;
+  desiredSpeed @2 :Float32;   # km/h, 250 = no limit
+  desiredSource @3 :Text;     # none, cam, section, bump, road, turn, gas
+  roadLimitSpeed @4 :Int32;
+  spdType @5 :Int32;          # TMAP SDI type of the active camera/bump, -1 none
+  spdLimit @6 :Int32;
+  spdDist @7 :Int32;          # m
+  spdCountDown @8 :Int32;     # s, 100 = none
+  turnInfo @9 :Int32;
+  distToTurn @10 :Int32;
+  roadName @11 :Text;
+  tbtText @12 :Text;
+  sdiDescr @13 :Text;
+  goPosDist @14 :Int32;
+  goPosTime @15 :Int32;
+  latitude @16 :Float64;
+  longitude @17 :Float64;
+  heading @18 :Float32;
+  remote @19 :Text;
 }
 
 struct CustomReserved11 @0xc2243c65e0340384 {
