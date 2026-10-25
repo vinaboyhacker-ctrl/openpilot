@@ -286,6 +286,16 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"SpeedLimitPolicy", {PERSISTENT | BACKUP, INT, "3"}},
     {"SpeedLimitValueOffset", {PERSISTENT | BACKUP, INT, "0"}},
 
+    // CarrotMan navigation (TMAP / Kakao via CarrotMan app)
+    {"CarrotNavi", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CarrotNaviBumpSpeed", {PERSISTENT | BACKUP, INT, "35"}},
+    {"CarrotNaviDecelRate", {PERSISTENT | BACKUP, INT, "120"}},
+    {"CarrotNaviRoadLimitOffset", {PERSISTENT | BACKUP, INT, "-1"}},
+    {"CarrotNaviSafetyFactor", {PERSISTENT | BACKUP, INT, "105"}},
+    {"CarrotNaviSpeedCtrlEnd", {PERSISTENT | BACKUP, INT, "6"}},
+    {"CarrotNaviSpeedCtrlMode", {PERSISTENT | BACKUP, INT, "2"}},
+    {"CarrotNaviTurnSpeed", {PERSISTENT | BACKUP, INT, "0"}},
+
     // Smart Cruise Control
     {"MapTargetVelocities", {CLEAR_ON_ONROAD_TRANSITION, STRING}},
     {"SmartCruiseControlMap", {PERSISTENT | BACKUP, BOOL, "0"}},
