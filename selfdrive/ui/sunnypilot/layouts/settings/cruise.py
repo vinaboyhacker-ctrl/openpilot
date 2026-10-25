@@ -57,6 +57,13 @@ class CruiseLayout(Widget):
       description=tr("Use map data to estimate the appropriate speed to drive through turns ahead."),
       param="SmartCruiseControlMap")
 
+    self.carrot_navi_toggle = toggle_item_sp(
+      title=tr("CarrotMan Navigation (TMAP / Kakao)"),
+      description=tr("Receive speed camera, section enforcement, speed bump and road speed limit data from the " +
+                     "CarrotMan app on a phone on the same Wi-Fi/hotspot, and slow down for them. " +
+                     "More options are available in sunnylink."),
+      param="CarrotNavi")
+
     self.custom_acc_toggle = toggle_item_sp(
       title=tr("Custom ACC Speed Increments"),
       description="",
@@ -92,6 +99,7 @@ class CruiseLayout(Widget):
       self.dec_toggle,
       self.scc_v_toggle,
       self.scc_m_toggle,
+      self.carrot_navi_toggle,
       self.custom_acc_toggle,
       self.custom_acc_short_increment,
       self.custom_acc_long_increment,
