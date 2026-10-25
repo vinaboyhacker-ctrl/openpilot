@@ -16,6 +16,7 @@ from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist 
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.models.helpers import get_active_bundle
+from openpilot.sunnypilot.carrot.carrot_planner import CarrotNaviPlanner
 
 DecState = custom.LongitudinalPlanSP.DynamicExperimentalControl.DynamicExperimentalControlState
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
@@ -27,7 +28,7 @@ class LongitudinalPlannerSP:
     self.resolver = SpeedLimitResolver()
     self.dec = DynamicExperimentalController(CP, mpc)
     self.scc = SmartCruiseControl()
-    self.resolver = SpeedLimitResolver()
+    self.carrot = CarrotNaviPlanner()
     self.sla = SpeedLimitAssist(CP, CP_SP)
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
     self.source = LongitudinalPlanSource.cruise
@@ -62,11 +63,15 @@ class LongitudinalPlannerSP:
     self.sla.update(long_enabled, long_override, v_ego, a_ego, v_cruise_cluster, self.resolver.speed_limit,
                     self.resolver.speed_limit_final_last, has_speed_limit, self.resolver.distance, self.events_sp)
 
+    # CarrotMan navigation (speed cameras, section enforcement, bumps, road limit, turns)
+    self.carrot.update(sm, long_enabled, long_override, v_ego, a_ego, self.events_sp)
+
     targets = {
       LongitudinalPlanSource.cruise: (v_cruise, a_ego),
       LongitudinalPlanSource.sccVision: (self.scc.vision.output_v_target, self.scc.vision.output_a_target),
       LongitudinalPlanSource.sccMap: (self.scc.map.output_v_target, self.scc.map.output_a_target),
       LongitudinalPlanSource.speedLimitAssist: (self.sla.output_v_target, self.sla.output_a_target),
+      LongitudinalPlanSource.carrotNavi: (self.carrot.output_v_target, self.carrot.output_a_target),
     }
 
     self.source = min(targets, key=lambda k: targets[k][0])
@@ -132,6 +137,17 @@ class LongitudinalPlannerSP:
     assist.active = self.sla.is_active
     assist.vTarget = float(self.sla.output_v_target)
     assist.aTarget = float(self.sla.output_a_target)
+
+    # CarrotMan navigation
+    carrotNavi = longitudinalPlanSP.carrotNavi
+    carrotNavi.enabled = self.carrot.enabled
+    carrotNavi.active = self.carrot.is_active
+    carrotNavi.vTarget = float(self.carrot.output_v_target)
+    carrotNavi.source = self.carrot.source
+    carrotNavi.spdType = self.carrot.spd_type
+    carrotNavi.spdLimit = self.carrot.spd_limit
+    carrotNavi.spdDist = self.carrot.spd_dist
+    carrotNavi.sdiDescr = self.carrot.sdi_descr
 
     # E2E Alerts
     e2eAlerts = longitudinalPlanSP.e2eAlerts
