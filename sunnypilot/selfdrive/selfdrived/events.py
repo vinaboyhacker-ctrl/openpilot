@@ -72,9 +72,33 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleLow, .1)
 
 
+_CARROT_SDI_VI = {
+  "Signal/speed camera": "Camera tốc độ/đèn đỏ", "Speed camera": "Camera tốc độ", "Section start": "Bắt đầu đoạn đo tốc độ",
+  "Section end": "Kết thúc đoạn đo tốc độ", "Section enforcement": "Đoạn đo tốc độ trung bình", "Mobile camera": "Camera di động",
+  "Speed risk zone": "Khu vực hay vượt tốc", "Speed bump": "Gờ giảm tốc", "School zone start": "Bắt đầu khu vực trường học",
+  "School zone end": "Hết khu vực trường học", "Rear speed camera": "Camera tốc độ phía sau",
+  "Rear signal/speed camera": "Camera tốc độ/đèn đỏ phía sau", "Signal camera": "Camera đèn đỏ",
+}
+_carrot_lang: str | None = None
+
+
+def _carrot_is_vi() -> bool:
+  global _carrot_lang
+  if _carrot_lang is None:
+    try:
+      from openpilot.common.params import Params
+      _carrot_lang = str(Params().get("LanguageSetting") or "en").removeprefix("main_")
+    except Exception:
+      _carrot_lang = "en"
+  return _carrot_lang == "vi"
+
+
 def carrot_navi_camera_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   cn = sm['longitudinalPlanSP'].carrotNavi
+  vi = _carrot_is_vi()
   descr = cn.sdiDescr or "Speed camera"
+  if vi:
+    descr = _CARROT_SDI_VI.get(descr, descr)
   dist = cn.spdDist
   dist_str = f"{dist / 1000:.1f} km" if dist >= 1000 else f"{dist} m"
   limit_str = f"{cn.spdLimit} km/h · " if cn.spdLimit > 0 else ""
