@@ -14,7 +14,7 @@ from openpilot.selfdrive.ui.mici.widgets.pairing_dialog import PairingDialog
 from openpilot.selfdrive.ui.mici.onroad.driver_camera_dialog import DriverCameraDialog
 from openpilot.selfdrive.ui.mici.layouts.onboarding import TrainingGuide, TermsPage
 from openpilot.system.ui.lib.application import gui_app, FontWeight, MousePos
-from openpilot.system.ui.lib.multilang import tr
+from openpilot.system.ui.lib.multilang import tr, multilang
 from openpilot.system.ui.widgets import Widget
 from openpilot.selfdrive.ui.ui_state import device, ui_state
 from openpilot.system.ui.widgets.label import UnifiedLabel
@@ -286,6 +286,30 @@ class UpdateOpenpilotBigButton(BigButton):
       self._waiting_for_updater_t = None
 
 
+# Languages offered on comma 4 (fonts without unifont, switchable without a restart)
+MICI_LANGUAGES = ["en", "vi"]
+
+
+class LanguageBigButton(BigButton):
+  def __init__(self):
+    super().__init__("language", "", gui_app.texture("icons_mici/settings/device/info.png", 64, 64))
+    self.set_click_callback(self._next_language)
+
+  def _current(self) -> str:
+    return multilang.language if multilang.language in MICI_LANGUAGES else "en"
+
+  def _next_language(self):
+    langs = MICI_LANGUAGES
+    code = langs[(langs.index(self._current()) + 1) % len(langs)]
+    multilang.change_language(code)
+
+  def _update_state(self):
+    super()._update_state()
+    name = multilang.codes.get(self._current(), "English")
+    if self.get_value() != name:
+      self.set_value(name)
+
+
 class DeviceLayoutMici(NavScroller):
   def __init__(self):
     super().__init__()
@@ -342,6 +366,7 @@ class DeviceLayoutMici(NavScroller):
       DeviceInfoLayoutMici(),
       UpdateOpenpilotBigButton(),
       PairBigButton(),
+      LanguageBigButton(),
       review_training_guide_btn,
       driver_cam_btn,
       terms_btn,
