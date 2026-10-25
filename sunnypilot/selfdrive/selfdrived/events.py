@@ -72,6 +72,19 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
     Priority.LOW, VisualAlert.none, AudibleAlertSP.promptSingleLow, .1)
 
 
+def carrot_navi_camera_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  cn = sm['longitudinalPlanSP'].carrotNavi
+  descr = cn.sdiDescr or "Speed camera"
+  dist = cn.spdDist
+  dist_str = f"{dist / 1000:.1f} km" if dist >= 1000 else f"{dist} m"
+  limit_str = f"{cn.spdLimit} km/h · " if cn.spdLimit > 0 else ""
+  return Alert(
+    f"{descr}: {limit_str}{dist_str}",
+    "",
+    AlertStatus.normal, AlertSize.small,
+    Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2)
+
+
 class EventsSP(EventsBase):
   def __init__(self):
     super().__init__()
@@ -242,5 +255,9 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.none,
       Priority.MID, VisualAlert.none, AudibleAlert.prompt, 3.),
+  },
+
+  EventNameSP.carrotNaviCamera: {
+    ET.PERMANENT: carrot_navi_camera_alert,
   },
 }
