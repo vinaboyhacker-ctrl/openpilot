@@ -1149,3 +1149,9 @@ msgstr "{} đoạn lái của bạn đã có trong dữ liệu huấn luyện."
 
 msgid "✓ SUBSCRIBED"
 msgstr "✓ ĐÃ ĐĂNG KÝ"
+
+msgid "near"
+msgstr "gần"
+
+msgid "far"
+msgstr "xa"
