@@ -148,6 +148,12 @@ class LongitudinalPlannerSP:
     carrotNavi.spdLimit = self.carrot.spd_limit
     carrotNavi.spdDist = self.carrot.spd_dist
     carrotNavi.sdiDescr = self.carrot.sdi_descr
+    cs = sm['carState']
+    carrotNavi.vEgo = float(cs.vEgo)
+    carrotNavi.vCruiseCluster = float(cs.vCruiseCluster)
+    carrotNavi.gasPressed = bool(cs.gasPressed)
+    carrotNavi.brakePressed = bool(cs.brakePressed)
+    carrotNavi.longActive = bool(sm['carControl'].enabled)
 
     # E2E Alerts
     e2eAlerts = longitudinalPlanSP.e2eAlerts
