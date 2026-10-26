@@ -188,18 +188,19 @@ class Car:
     # log fingerprint in sentry
     sunnypilot_interfaces.log_fingerprint(self.CP)
 
-  def _vw_main_switch_as_cancel(self, CS) -> None:
+  def _vw_gap_button_any_value(self, CS) -> None:
+    """opendbc only maps GRA_Verstellung_Zeitluecke == 1 to the distance button. Treat 2 and 3 as presses too."""
     if self.CP.brand != "volkswagen":
       return
     gra = getattr(self.CI.CS, "gra_stock_values", None)
-    if not gra or "GRA_Hauptschalter" not in gra:
+    if not gra or "GRA_Verstellung_Zeitluecke" not in gra:
       return
-    pressed = bool(gra["GRA_Hauptschalter"])
-    prev = getattr(self, "_vw_main_switch_prev", False)
-    self._vw_main_switch_prev = pressed
+    pressed = int(gra["GRA_Verstellung_Zeitluecke"]) in (2, 3)
+    prev = getattr(self, "_vw_gap_prev", False)
+    self._vw_gap_prev = pressed
     if pressed != prev:
       ev = structs.CarState.ButtonEvent()
-      ev.type = structs.CarState.ButtonEvent.Type.cancel
+      ev.type = structs.CarState.ButtonEvent.Type.gapAdjustCruise
       ev.pressed = pressed
       CS.buttonEvents = list(CS.buttonEvents) + [ev]
 
@@ -213,14 +214,12 @@ class Car:
     CS, CS_SP = self.CI.update(can_list)
     CS_SP = convert_to_capnp(CS_SP)
 
-    # Volkswagen: treat the steering wheel I/O (cruise main switch) as a cancel button.
-    # With MADS this cancels openpilot longitudinal (ACC) while lane keeping stays active.
-    self._vw_main_switch_as_cancel(CS)
-
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)
 
     self.sm.update(0)
+
+    self._vw_gap_button_any_value(CS)
 
     can_rcv_valid = len(can_strs) > 0
 
