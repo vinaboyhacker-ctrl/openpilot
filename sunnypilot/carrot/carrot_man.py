@@ -240,7 +240,10 @@ class CarrotMan:
     for target in (self.udp_thread, self.tcp_thread, self.http_thread):
       threading.Thread(target=target, daemon=True).start()
 
-    sm = messaging.SubMaster(['carState', 'selfdriveState'])
+    # NOTE: do not subscribe to carState here. msgq allows at most 15 readers per service and carState
+    # already has that many on sunnypilot; one more reader evicts all of them and breaks calibrationd,
+    # dmonitoringd, plannerd, ... Vehicle data is relayed by the planner in longitudinalPlanSP.carrotNavi.
+    sm = messaging.SubMaster(['longitudinalPlanSP'])
     pm = messaging.PubMaster(['carrotManSP'])
     bsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     bsock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -256,13 +259,13 @@ class CarrotMan:
       dt = min(max(now - last_t, 0.0), 0.5)
       last_t = now
 
-      is_onroad = sm.alive['carState']
-      cs = sm['carState']
-      self.v_ego = cs.vEgo if is_onroad else 0.0
-      self.v_cruise_kph = cs.vCruiseCluster if is_onroad else 0.0
-      self.controls_active = sm['selfdriveState'].active if sm.alive['selfdriveState'] else False
-      gas = bool(cs.gasPressed) if is_onroad else False
-      brake = bool(cs.brakePressed) if is_onroad else False
+      is_onroad = sm.alive['longitudinalPlanSP']
+      cn = sm['longitudinalPlanSP'].carrotNavi
+      self.v_ego = float(cn.vEgo) if is_onroad else 0.0
+      self.v_cruise_kph = float(cn.vCruiseCluster) if is_onroad else 0.0
+      self.controls_active = bool(cn.longActive) if is_onroad else False
+      gas = bool(cn.gasPressed) if is_onroad else False
+      brake = bool(cn.brakePressed) if is_onroad else False
 
       if now >= next_params:
         next_params = now + PARAMS_UPDATE_INTERVAL
