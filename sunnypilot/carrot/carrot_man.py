@@ -7,6 +7,7 @@ Network protocol (compatible with the CarrotMan Android app used with CarrotPilo
   * UDP 7706  app -> device   CarrotMan state json (nRoadLimitSpeed, nSdi*, nTBT*, ...)
   * TCP 7712  app -> device   newline separated json ({"rgdata": {...}, ...})
   * HTTP 7713 app -> device   POST /api/navi/<version> json ({"rgdata": {...}, ...})
+  * TCP 7714  new Carrot Navi app (protocol v2, WebSocket), see carrot_navi_v2.py
 
 Publishes `carrotManSP` at 10 Hz, consumed by the sunnypilot longitudinal planner.
 """
@@ -198,6 +199,21 @@ class CarrotMan:
         cloudlog.exception("carrot_man: http thread error")
         time.sleep(2)
 
+  def handle_v2_state(self, legacy: dict, peer: str) -> None:
+    with self.lock:
+      self.state.update_json(legacy)
+      if peer:
+        self.remote_addr = (peer, BROADCAST_PORT)
+        self.last_remote_time = time.monotonic()
+
+  def navi_v2_thread(self) -> None:
+    try:
+      from openpilot.sunnypilot.carrot.carrot_navi_v2 import CarrotNaviV2Server
+    except Exception:
+      cloudlog.exception("carrot_man: Carrot Navi v2 receiver unavailable")
+      return
+    CarrotNaviV2Server(self.handle_v2_state, log=cloudlog.info).run_forever()
+
   # ------------------------------------------------------------ broadcast
   def make_status_message(self, is_onroad: bool) -> bytes:
     out = self.last_out
@@ -237,7 +253,7 @@ class CarrotMan:
 
   # ------------------------------------------------------------ main loop
   def run(self) -> None:
-    for target in (self.udp_thread, self.tcp_thread, self.http_thread):
+    for target in (self.udp_thread, self.tcp_thread, self.http_thread, self.navi_v2_thread):
       threading.Thread(target=target, daemon=True).start()
 
     # NOTE: do not subscribe to carState here. msgq allows at most 15 readers per service and carState
