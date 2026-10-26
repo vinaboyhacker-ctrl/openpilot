@@ -8,20 +8,30 @@ import pyray as rl
 
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
 from openpilot.selfdrive.ui.sunnypilot.onroad.blind_spot_indicators import BlindSpotIndicators
+from openpilot.selfdrive.ui.sunnypilot.mici.onroad.speed_limit import SpeedLimitRendererMici
+from openpilot.selfdrive.ui.sunnypilot.mici.onroad.personality import PersonalityIndicator
 
 
 class HudRendererSP(HudRenderer):
   def __init__(self):
     super().__init__()
     self.blind_spot_indicators = BlindSpotIndicators()
+    self.speed_limit_renderer = SpeedLimitRendererMici()
+    self.personality_indicator = PersonalityIndicator()
 
   def _update_state(self) -> None:
     super()._update_state()
     self.blind_spot_indicators.update()
+    self.speed_limit_renderer.update()
+    self.personality_indicator.update()
 
   def _render(self, rect: rl.Rectangle) -> None:
     super()._render(rect)
     self.blind_spot_indicators.render(rect)
+    # speed limit sign (hidden while an alert covers the top of the screen)
+    if self._can_draw_top_icons:
+      self.speed_limit_renderer.render(rect)
+    self.personality_indicator.render(rect)
 
   def _has_blind_spot_detected(self) -> bool:
 

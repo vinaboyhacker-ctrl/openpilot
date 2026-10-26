@@ -207,7 +207,13 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
     spdLimit @5 :Int32;
     spdDist @6 :Int32;
     sdiDescr @7 :Text;
-  }
+    # vehicle data relayed for carrot_man so it does not need its own carState reader
+    # (carState already has the maximum number of msgq readers)
+    vEgo @8 :Float32;
+    vCruiseCluster @9 :Float32;
+    gasPressed @10 :Bool;
+    brakePressed @11 :Bool;
+    longActive @12 :Bool;
 
   struct DynamicExperimentalControl {
     state @0 :DynamicExperimentalControlState;
