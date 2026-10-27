@@ -214,6 +214,7 @@ struct LongitudinalPlanSP @0xf35cc4560bbf6ec2 {
     gasPressed @10 :Bool;
     brakePressed @11 :Bool;
     longActive @12 :Bool;
+  }
 
   struct DynamicExperimentalControl {
     state @0 :DynamicExperimentalControlState;
