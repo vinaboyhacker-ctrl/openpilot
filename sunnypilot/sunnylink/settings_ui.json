@@ -1022,35 +1022,35 @@
         },
         {
           "id": "carrot_navi",
-          "title": "D\u1eabn \u0111\u01b0\u1eddng CarrotMan (TMAP / Kakao)",
-          "description": "Nh\u1eadn d\u1eef li\u1ec7u camera ph\u1ea1t ngu\u1ed9i, \u0111o\u1ea1n \u0111o t\u1ed1c \u0111\u1ed9 trung b\u00ecnh, g\u1edd gi\u1ea3m t\u1ed1c v\u00e0 gi\u1edbi h\u1ea1n t\u1ed1c \u0111\u1ed9 t\u1eeb app CarrotMan tr\u00ean \u0111i\u1ec7n tho\u1ea1i (c\u00f9ng Wi\u2011Fi/hotspot v\u1edbi thi\u1ebft b\u1ecb) v\u00e0 t\u1ef1 gi\u1ea3m t\u1ed1c theo. Chuy\u1ec3n t\u1eeb CarrotPilot.",
+          "title": "CarrotMan Navigation (TMAP / Kakao)",
+          "description": "Receive speed camera, section enforcement, speed bump and road speed limit data from the CarrotMan app on a phone connected to the same Wi-Fi/hotspot as the device, and slow down for them. Ported from CarrotPilot.",
           "items": [
             {
               "key": "CarrotNavi",
               "widget": "toggle",
-              "title": "B\u1eadt d\u1eabn \u0111\u01b0\u1eddng CarrotMan",
-              "description": "Ch\u1ea1y c\u1ea7u n\u1ed1i CarrotMan (UDP 7705/7706, TCP 7712, HTTP 7713). Khi g\u1ea7n camera s\u1ebd hi\u1ec7n c\u1ea3nh b\u00e1o. T\u1ef1 gi\u1ea3m t\u1ed1c c\u1ea7n b\u1eadt \u0111i\u1ec1u khi\u1ec3n ga/phanh c\u1ee7a sunnypilot.",
+              "title": "Enable CarrotMan Navigation",
+              "description": "Start the CarrotMan bridge (UDP 7705/7706, TCP 7712, HTTP 7713). Approaching cameras are shown as an alert. Speed control requires sunnypilot longitudinal control.",
               "sub_items": [
                 {
                   "key": "CarrotNaviSpeedCtrlMode",
                   "widget": "multiple_button",
-                  "title": "Gi\u1ea3m t\u1ed1c cho",
+                  "title": "Slow Down For",
                   "options": [
                     {
                       "value": 0,
-                      "label": "Ch\u1ec9 c\u1ea3nh b\u00e1o"
+                      "label": "Alerts Only"
                     },
                     {
                       "value": 1,
-                      "label": "Camera"
+                      "label": "Cameras"
                     },
                     {
                       "value": 2,
-                      "label": "+ G\u1edd gi\u1ea3m t\u1ed1c"
+                      "label": "+ Bumps"
                     },
                     {
                       "value": 3,
-                      "label": "+ Camera di \u0111\u1ed9ng"
+                      "label": "+ Mobile Cams"
                     }
                   ],
                   "enablement": [
@@ -1064,8 +1064,8 @@
                 {
                   "key": "CarrotNaviSafetyFactor",
                   "widget": "option",
-                  "title": "H\u1ec7 s\u1ed1 t\u1ed1c \u0111\u1ed9 t\u1ea1i camera",
-                  "description": "T\u1ed1c \u0111\u1ed9 m\u1ee5c ti\u00eau t\u1ea1i camera = gi\u1edbi h\u1ea1n c\u1ee7a camera \u00d7 ph\u1ea7n tr\u0103m n\u00e0y.",
+                  "title": "Camera Speed Factor",
+                  "description": "Target speed at cameras is the camera limit times this percentage.",
                   "min": 80,
                   "max": 120,
                   "step": 1,
@@ -1081,8 +1081,8 @@
                 {
                   "key": "CarrotNaviSpeedCtrlEnd",
                   "widget": "option",
-                  "title": "\u0110\u1ea1t t\u1ed1c \u0111\u1ed9 tr\u01b0\u1edbc camera",
-                  "description": "Gi\u1ea3m xong v\u1ec1 t\u1ed1c \u0111\u1ed9 camera tr\u01b0\u1edbc khi t\u1edbi camera b\u1ea5y nhi\u00eau gi\u00e2y.",
+                  "title": "Reach Target Before Camera",
+                  "description": "Reach the camera speed this many seconds before the camera.",
                   "min": 3,
                   "max": 20,
                   "step": 1,
@@ -1098,8 +1098,8 @@
                 {
                   "key": "CarrotNaviDecelRate",
                   "widget": "option",
-                  "title": "M\u1ee9c gi\u1ea3m t\u1ed1c",
-                  "description": "M\u1ee9c gi\u1ea3m t\u1ed1c khi ti\u1ebfn t\u1edbi camera, \u0111\u01a1n v\u1ecb 0.01 m/s\u00b2. 120 = 1.2 m/s\u00b2. C\u00e0ng th\u1ea5p th\u00ec phanh c\u00e0ng s\u1edbm.",
+                  "title": "Deceleration Rate",
+                  "description": "Deceleration used for the approach profile, in 0.01 m/s\u00b2. 120 = 1.2 m/s\u00b2. Lower starts braking earlier.",
                   "min": 50,
                   "max": 300,
                   "step": 10,
@@ -1114,7 +1114,7 @@
                 {
                   "key": "CarrotNaviBumpSpeed",
                   "widget": "option",
-                  "title": "T\u1ed1c \u0111\u1ed9 qua g\u1edd gi\u1ea3m t\u1ed1c",
+                  "title": "Speed Bump Speed",
                   "min": 10,
                   "max": 100,
                   "step": 5,
@@ -1130,8 +1130,8 @@
                 {
                   "key": "CarrotNaviRoadLimitOffset",
                   "widget": "option",
-                  "title": "Theo gi\u1edbi h\u1ea1n t\u1ed1c \u0111\u1ed9 \u0111\u01b0\u1eddng",
-                  "description": "-1 = t\u1eaft. N\u1ebfu kh\u00e1c, gi\u1edbi h\u1ea1n t\u1ed1c \u0111\u1ed9 theo bi\u1ec3n c\u1ee7a \u0111\u01b0\u1eddng c\u1ed9ng th\u00eam gi\u00e1 tr\u1ecb n\u00e0y.",
+                  "title": "Follow Road Speed Limit",
+                  "description": "-1 = off. Otherwise cap the speed at the navigation road speed limit plus this offset.",
                   "min": -1,
                   "max": 100,
                   "step": 1,
@@ -1150,8 +1150,8 @@
                 {
                   "key": "CarrotNaviTurnSpeed",
                   "widget": "option",
-                  "title": "T\u1ed1c \u0111\u1ed9 khi r\u1ebd",
-                  "description": "0 = t\u1eaft. Gi\u1ea3m v\u1ec1 t\u1ed1c \u0111\u1ed9 n\u00e0y khi d\u1eabn \u0111\u01b0\u1eddng b\u00e1o s\u1eafp r\u1ebd.",
+                  "title": "Turn Speed",
+                  "description": "0 = off. Slow down to this speed for turns announced by the navigation route.",
                   "min": 0,
                   "max": 100,
                   "step": 5,
