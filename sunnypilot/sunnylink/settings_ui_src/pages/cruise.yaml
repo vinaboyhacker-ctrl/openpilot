@@ -268,36 +268,36 @@ sections:
         field: has_icbm
         equals: true
 - id: carrot_navi
-  title: Dẫn đường CarrotMan (TMAP / Kakao)
-  description: Nhận dữ liệu camera phạt nguội, đoạn đo tốc độ trung bình, gờ giảm tốc và giới hạn tốc độ từ app CarrotMan
-    trên điện thoại (cùng Wi‑Fi/hotspot với thiết bị) và tự giảm tốc theo. Chuyển từ CarrotPilot.
+  title: CarrotMan Navigation (TMAP / Kakao)
+  description: Receive speed camera, section enforcement, speed bump and road speed limit data from the CarrotMan app
+    on a phone connected to the same Wi-Fi/hotspot as the device, and slow down for them. Ported from CarrotPilot.
   items:
   - key: CarrotNavi
     widget: toggle
-    title: Bật dẫn đường CarrotMan
-    description: Chạy cầu nối CarrotMan (UDP 7705/7706, TCP 7712, HTTP 7713). Khi gần camera sẽ hiện cảnh báo. Tự giảm tốc
-      cần bật điều khiển ga/phanh của sunnypilot.
+    title: Enable CarrotMan Navigation
+    description: Start the CarrotMan bridge (UDP 7705/7706, TCP 7712, HTTP 7713). Approaching cameras are shown as an
+      alert. Speed control requires sunnypilot longitudinal control.
     sub_items:
     - key: CarrotNaviSpeedCtrlMode
       widget: multiple_button
-      title: Giảm tốc cho
+      title: Slow Down For
       options:
       - value: 0
-        label: Chỉ cảnh báo
+        label: Alerts Only
       - value: 1
-        label: Camera
+        label: Cameras
       - value: 2
-        label: + Gờ giảm tốc
+        label: + Bumps
       - value: 3
-        label: + Camera di động
+        label: + Mobile Cams
       enablement:
       - type: param
         key: CarrotNavi
         equals: true
     - key: CarrotNaviSafetyFactor
       widget: option
-      title: Hệ số tốc độ tại camera
-      description: Tốc độ mục tiêu tại camera = giới hạn của camera × phần trăm này.
+      title: Camera Speed Factor
+      description: Target speed at cameras is the camera limit times this percentage.
       min: 80
       max: 120
       step: 1
@@ -308,8 +308,8 @@ sections:
         equals: true
     - key: CarrotNaviSpeedCtrlEnd
       widget: option
-      title: Đạt tốc độ trước camera
-      description: Giảm xong về tốc độ camera trước khi tới camera bấy nhiêu giây.
+      title: Reach Target Before Camera
+      description: Reach the camera speed this many seconds before the camera.
       min: 3
       max: 20
       step: 1
@@ -320,8 +320,8 @@ sections:
         equals: true
     - key: CarrotNaviDecelRate
       widget: option
-      title: Mức giảm tốc
-      description: Mức giảm tốc khi tiến tới camera, đơn vị 0.01 m/s². 120 = 1.2 m/s². Càng thấp thì phanh càng sớm.
+      title: Deceleration Rate
+      description: Deceleration used for the approach profile, in 0.01 m/s². 120 = 1.2 m/s². Lower starts braking earlier.
       min: 50
       max: 300
       step: 10
@@ -331,7 +331,7 @@ sections:
         equals: true
     - key: CarrotNaviBumpSpeed
       widget: option
-      title: Tốc độ qua gờ giảm tốc
+      title: Speed Bump Speed
       min: 10
       max: 100
       step: 5
@@ -342,8 +342,8 @@ sections:
         equals: true
     - key: CarrotNaviRoadLimitOffset
       widget: option
-      title: Theo giới hạn tốc độ đường
-      description: -1 = tắt. Nếu khác, giới hạn tốc độ theo biển của đường cộng thêm giá trị này.
+      title: Follow Road Speed Limit
+      description: -1 = off. Otherwise cap the speed at the navigation road speed limit plus this offset.
       min: -1
       max: 100
       step: 1
@@ -356,8 +356,8 @@ sections:
         equals: true
     - key: CarrotNaviTurnSpeed
       widget: option
-      title: Tốc độ khi rẽ
-      description: 0 = tắt. Giảm về tốc độ này khi dẫn đường báo sắp rẽ.
+      title: Turn Speed
+      description: 0 = off. Slow down to this speed for turns announced by the navigation route.
       min: 0
       max: 100
       step: 5

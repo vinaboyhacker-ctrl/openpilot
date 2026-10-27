@@ -5,7 +5,6 @@ from itertools import zip_longest
 from typing import Union
 import pyray as rl
 
-from openpilot.system.ui.lib.multilang import tr as _tr
 from openpilot.system.ui.lib.application import gui_app, FontWeight, DEFAULT_TEXT_SIZE, DEFAULT_TEXT_COLOR, FONT_SCALE
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -318,8 +317,8 @@ class UnifiedLabel(Widget):
 
   @property
   def text(self) -> str:
-    """Get the current text content (translated for display when a translation exists)."""
-    return _tr(str(_resolve_value(self._text)))
+    """Get the current text content."""
+    return str(_resolve_value(self._text))
 
   @property
   def font_size(self) -> int:
