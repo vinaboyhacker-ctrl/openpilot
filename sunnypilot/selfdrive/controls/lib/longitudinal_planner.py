@@ -16,11 +16,11 @@ from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_assist 
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.speed_limit_resolver import SpeedLimitResolver
 from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.models.helpers import get_active_bundle
+from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.carrot.carrot_planner import CarrotNaviPlanner
 
 DecState = custom.LongitudinalPlanSP.DynamicExperimentalControl.DynamicExperimentalControlState
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
-
 
 class LongitudinalPlannerSP:
   def __init__(self, CP: structs.CarParams, CP_SP: structs.CarParamsSP, mpc):
@@ -64,7 +64,12 @@ class LongitudinalPlannerSP:
                     self.resolver.speed_limit_final_last, has_speed_limit, self.resolver.distance, self.events_sp)
 
     # CarrotMan navigation (speed cameras, section enforcement, bumps, road limit, turns)
-    self.carrot.update(sm, long_enabled, long_override, v_ego, a_ego, self.events_sp)
+    # Never let a CarrotMan problem take down plannerd: log it and fall back to "no carrot target".
+    try:
+      self.carrot.update(sm, long_enabled, long_override, v_ego, a_ego, self.events_sp)
+    except Exception:
+      cloudlog.exception("carrot: planner update failed")
+      self.carrot.reset_outputs(a_ego)
 
     targets = {
       LongitudinalPlanSource.cruise: (v_cruise, a_ego),
@@ -139,21 +144,25 @@ class LongitudinalPlannerSP:
     assist.aTarget = float(self.sla.output_a_target)
 
     # CarrotMan navigation
-    carrotNavi = longitudinalPlanSP.carrotNavi
-    carrotNavi.enabled = self.carrot.enabled
-    carrotNavi.active = self.carrot.is_active
-    carrotNavi.vTarget = float(self.carrot.output_v_target)
-    carrotNavi.source = self.carrot.source
-    carrotNavi.spdType = self.carrot.spd_type
-    carrotNavi.spdLimit = self.carrot.spd_limit
-    carrotNavi.spdDist = self.carrot.spd_dist
-    carrotNavi.sdiDescr = self.carrot.sdi_descr
-    cs = sm['carState']
-    carrotNavi.vEgo = float(cs.vEgo)
-    carrotNavi.vCruiseCluster = float(cs.vCruiseCluster)
-    carrotNavi.gasPressed = bool(cs.gasPressed)
-    carrotNavi.brakePressed = bool(cs.brakePressed)
-    carrotNavi.longActive = bool(sm['carControl'].enabled)
+    try:
+      carrotNavi = longitudinalPlanSP.carrotNavi
+
+      carrotNavi.enabled = bool(self.carrot.enabled)
+      carrotNavi.active = bool(self.carrot.is_active)
+      carrotNavi.vTarget = float(self.carrot.output_v_target)
+      carrotNavi.source = self.carrot.source
+      carrotNavi.spdType = self.carrot.spd_type
+      carrotNavi.spdLimit = self.carrot.spd_limit
+      carrotNavi.spdDist = self.carrot.spd_dist
+      carrotNavi.sdiDescr = self.carrot.sdi_descr
+      cs = sm['carState']
+      carrotNavi.vEgo = float(cs.vEgo)
+      carrotNavi.vCruiseCluster = float(cs.vCruiseCluster)
+      carrotNavi.gasPressed = bool(cs.gasPressed)
+      carrotNavi.brakePressed = bool(cs.brakePressed)
+      carrotNavi.longActive = bool(sm['carControl'].enabled)
+    except Exception:
+      cloudlog.exception("carrot: publish failed")
 
     # E2E Alerts
     e2eAlerts = longitudinalPlanSP.e2eAlerts
