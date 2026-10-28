@@ -42,6 +42,10 @@ class CarrotNaviPlanner:
     self.spd_dist = 0
     self.sdi_descr = ""
 
+  def reset_outputs(self, a_ego: float = 0.) -> None:
+    self._reset()
+    self.output_a_target = a_ego
+
   def update(self, sm: messaging.SubMaster, long_enabled: bool, long_override: bool, v_ego: float, a_ego: float,
              events_sp=None) -> None:
     self.frame += 1
