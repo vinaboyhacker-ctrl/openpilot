@@ -10,6 +10,7 @@ import pyray as rl
 from openpilot.selfdrive.ui.sunnypilot.onroad.speed_limit import SpeedLimitRenderer, SpeedLimitSource, Colors
 from openpilot.selfdrive.ui.ui_state import ui_state
 from openpilot.sunnypilot.selfdrive.controls.lib.speed_limit.common import Mode as SpeedLimitMode
+from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import measure_text_cached
 
 SIGN_RADIUS = 46
@@ -22,6 +23,7 @@ class SpeedLimitRendererMici(SpeedLimitRenderer):
     super().__init__()
     self.cam_limit = 0
     self.cam_dist = 0
+    self.font_info = gui_app.font(FontWeight.MEDIUM)
 
   def update(self):
     super().update()
@@ -84,8 +86,8 @@ class SpeedLimitRendererMici(SpeedLimitRenderer):
     self._draw_text_centered(self.font_bold, val, font_size, center, txt_color)
 
   def _draw_info(self, center_x: float, y: float, text: str, color: rl.Color):
-    size = measure_text_cached(self.font_bold, text, INFO_FONT)
+    size = measure_text_cached(self.font_info, text, INFO_FONT)
     pad = 8
     box = rl.Rectangle(center_x - size.x / 2 - pad, y, size.x + pad * 2, size.y + 4)
     rl.draw_rectangle_rounded(box, 0.5, 8, rl.Color(0, 0, 0, 170))
-    rl.draw_text_ex(self.font_bold, text, rl.Vector2(box.x + pad, y + 2), INFO_FONT, 0, color)
+    rl.draw_text_ex(self.font_info, text, rl.Vector2(box.x + pad, y + 2), INFO_FONT, 0, color)
