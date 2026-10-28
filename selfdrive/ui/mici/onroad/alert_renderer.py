@@ -323,6 +323,12 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
     if icon_side is not None:
       font_size -= 10
 
+    # CarrotMan camera/bump alerts: thinner and slightly smaller so the road stays visible on the small screen
+    is_carrot = alert.alert_type.startswith('carrotNavi') if alert.alert_type else False
+    if is_carrot:
+      font_size = int(font_size * 0.88)
+    self._alert_text1_label.set_font_weight(FontWeight.MEDIUM if is_carrot else FontWeight.DISPLAY)
+
     color = rl.Color(255, 255, 255, int(255 * 0.9 * self._alpha_filter.x))
 
     text1_y_offset = 11 if font_size >= 70 else 4
