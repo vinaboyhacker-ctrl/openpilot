@@ -77,4 +77,4 @@ class CarrotNaviPlanner:
       return
 
     self.output_v_target = desired_kph * CV.KPH_TO_MS
-    self.is_active = self.output_v_target < v_ego + 0.5 or self.source in CAMERA_ALERT_SOURCES
+    self.is_active = bool(self.output_v_target < v_ego + 0.5 or self.source in CAMERA_ALERT_SOURCES)

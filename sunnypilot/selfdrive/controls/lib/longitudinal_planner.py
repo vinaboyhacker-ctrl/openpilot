@@ -22,7 +22,6 @@ from openpilot.sunnypilot.carrot.carrot_planner import CarrotNaviPlanner
 DecState = custom.LongitudinalPlanSP.DynamicExperimentalControl.DynamicExperimentalControlState
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
 
-
 class LongitudinalPlannerSP:
   def __init__(self, CP: structs.CarParams, CP_SP: structs.CarParamsSP, mpc):
     self.events_sp = EventsSP()
@@ -147,8 +146,9 @@ class LongitudinalPlannerSP:
     # CarrotMan navigation
     try:
       carrotNavi = longitudinalPlanSP.carrotNavi
-      carrotNavi.enabled = self.carrot.enabled
-      carrotNavi.active = self.carrot.is_active
+
+      carrotNavi.enabled = bool(self.carrot.enabled)
+      carrotNavi.active = bool(self.carrot.is_active)
       carrotNavi.vTarget = float(self.carrot.output_v_target)
       carrotNavi.source = self.carrot.source
       carrotNavi.spdType = self.carrot.spd_type
