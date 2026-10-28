@@ -42,6 +42,10 @@ class CarrotNaviPlanner:
     self.spd_dist = 0
     self.sdi_descr = ""
 
+  def reset_outputs(self, a_ego: float = 0.) -> None:
+    self._reset()
+    self.output_a_target = a_ego
+
   def update(self, sm: messaging.SubMaster, long_enabled: bool, long_override: bool, v_ego: float, a_ego: float,
              events_sp=None) -> None:
     self.frame += 1
@@ -73,4 +77,4 @@ class CarrotNaviPlanner:
       return
 
     self.output_v_target = desired_kph * CV.KPH_TO_MS
-    self.is_active = self.output_v_target < v_ego + 0.5 or self.source in CAMERA_ALERT_SOURCES
+    self.is_active = bool(self.output_v_target < v_ego + 0.5 or self.source in CAMERA_ALERT_SOURCES)
