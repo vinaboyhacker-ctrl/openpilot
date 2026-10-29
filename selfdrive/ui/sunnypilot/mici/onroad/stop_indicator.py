@@ -46,11 +46,12 @@ class StopIndicator:
       show = False
     self._alpha.update(1. if show else 0.)
 
-  def render(self, rect: rl.Rectangle) -> None:
+  def render(self, rect: rl.Rectangle, alert_active: bool = False) -> None:
     a = int(255 * self._alpha.x)
     if a < 5:
       return
-    cx = int(rect.x + rect.width / 2)
+    # top-center normally; top-right while an alert's text occupies the top-left/center
+    cx = int(rect.x + rect.width - RADIUS - 18) if alert_active else int(rect.x + rect.width / 2)
     cy = int(rect.y + RADIUS + 14)
     color = rl.Color(*self._color, a)
     if self._filled:

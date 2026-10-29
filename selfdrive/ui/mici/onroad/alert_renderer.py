@@ -311,10 +311,12 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
       yellow = rl.Color(255, 200, 0, a)
       black = rl.Color(0, 0, 0, a)
       rl.draw_triangle(rl.Vector2(x + size / 2, y), rl.Vector2(x, y + size), rl.Vector2(x + size, y + size), yellow)
-      base_y = y + size * 0.82
-      rl.draw_ellipse(int(x + size / 2), int(base_y), size * 0.22, size * 0.20, black)
-      rl.draw_rectangle(int(x + size * 0.26), int(base_y), int(size * 0.48), int(size * 0.14), yellow)
-      rl.draw_rectangle(int(x + size * 0.18), int(base_y), int(size * 0.64), 4, black)
+      base_y = y + size * 0.80
+      hump_h = size * 0.16
+      rl.draw_ellipse(int(x + size / 2), int(base_y), size * 0.22, hump_h, black)
+      # cover the lower half of the ellipse (stays inside the triangle)
+      rl.draw_rectangle(int(x + size * 0.26), int(base_y), int(size * 0.48), int(hump_h + 2), yellow)
+      rl.draw_rectangle(int(x + size * 0.16), int(base_y), int(size * 0.68), 4, black)
     else:
       # camera: white body, dark lens; section control gets a bar underneath
       white = rl.Color(255, 255, 255, a)
@@ -350,8 +352,8 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
     # CarrotMan camera/bump alerts: icon on the left + numbers only, thinner font
     is_carrot = alert.alert_type.startswith('carrotNavi') if alert.alert_type else False
     if is_carrot:
-      font_size = int(font_size * 0.88)
-      icon_size = 80
+      font_size = 54  # short numeric text; leaves the right side free for the stop indicator
+      icon_size = 72
       icon_x = alert_layout.text_rect.x
       icon_y = alert_layout.text_rect.y + 6
       try:

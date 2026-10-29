@@ -77,7 +77,7 @@ def carrot_navi_camera_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
   cn = sm['longitudinalPlanSP'].carrotNavi
   dist = cn.spdDist
   dist_str = f"{dist / 1000:.1f}km" if dist >= 1000 else f"{dist}m"
-  limit_str = f"{cn.spdLimit} · " if cn.spdLimit > 0 and cn.source != "bump" else ""
+  limit_str = f"{cn.spdLimit} • " if cn.spdLimit > 0 and cn.source != "bump" else ""
   return Alert(
     f"{limit_str}{dist_str}",
     "",

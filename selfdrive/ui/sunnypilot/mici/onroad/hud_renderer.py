@@ -28,7 +28,7 @@ class HudRendererSP(HudRenderer):
   def _render(self, rect: rl.Rectangle) -> None:
     super()._render(rect)
     self.blind_spot_indicators.render(rect)
-    self.stop_indicator.render(rect)
+    self.stop_indicator.render(rect, not self._can_draw_top_icons)
     # speed limit sign (hidden while an alert covers the top of the screen)
     if self._can_draw_top_icons:
       self.speed_limit_renderer.render(rect)
