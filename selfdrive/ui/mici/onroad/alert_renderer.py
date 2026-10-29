@@ -304,6 +304,30 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
                                  int(bg_height - solid_height),
                                  color, translucent_color)
 
+  def _draw_carrot_icon(self, source: str, x: float, y: float, size: int) -> None:
+    a = int(255 * self._alpha_filter.x)
+    if source == "bump":
+      # yellow warning triangle with a black hump
+      yellow = rl.Color(255, 200, 0, a)
+      black = rl.Color(0, 0, 0, a)
+      rl.draw_triangle(rl.Vector2(x + size / 2, y), rl.Vector2(x, y + size), rl.Vector2(x + size, y + size), yellow)
+      base_y = y + size * 0.82
+      rl.draw_ellipse(int(x + size / 2), int(base_y), size * 0.22, size * 0.20, black)
+      rl.draw_rectangle(int(x + size * 0.26), int(base_y), int(size * 0.48), int(size * 0.14), yellow)
+      rl.draw_rectangle(int(x + size * 0.18), int(base_y), int(size * 0.64), 4, black)
+    else:
+      # camera: white body, dark lens; section control gets a bar underneath
+      white = rl.Color(255, 255, 255, a)
+      dark = rl.Color(40, 40, 40, a)
+      body = rl.Rectangle(x + 4, y + size * 0.28, size - 8, size * 0.52)
+      rl.draw_rectangle(int(x + size * 0.30), int(y + size * 0.16), int(size * 0.26), int(size * 0.14), white)
+      rl.draw_rectangle_rounded(body, 0.3, 8, white)
+      cx, cy = int(x + size / 2), int(y + size * 0.54)
+      rl.draw_circle(cx, cy, size * 0.19, dark)
+      rl.draw_circle(cx, cy, size * 0.08, white)
+      if source == "section":
+        rl.draw_rectangle(int(x + 4), int(y + size * 0.88), size - 8, 6, rl.Color(255, 70, 70, a))
+
   def _draw_text(self, alert: Alert, alert_layout: AlertLayout) -> None:
     icon_side = alert_layout.icon.side if alert_layout.icon is not None else None
 
@@ -323,10 +347,21 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
     if icon_side is not None:
       font_size -= 10
 
-    # CarrotMan camera/bump alerts: thinner and slightly smaller so the road stays visible on the small screen
+    # CarrotMan camera/bump alerts: icon on the left + numbers only, thinner font
     is_carrot = alert.alert_type.startswith('carrotNavi') if alert.alert_type else False
     if is_carrot:
       font_size = int(font_size * 0.88)
+      icon_size = 80
+      icon_x = alert_layout.text_rect.x
+      icon_y = alert_layout.text_rect.y + 6
+      try:
+        source = str(ui_state.sm['longitudinalPlanSP'].carrotNavi.source)
+      except Exception:
+        source = "cam"
+      self._draw_carrot_icon(source, icon_x, icon_y, icon_size)
+      alert_layout = AlertLayout(rl.Rectangle(icon_x + icon_size + 16, alert_layout.text_rect.y,
+                                              alert_layout.text_rect.width - icon_size - 16, alert_layout.text_rect.height),
+                                 alert_layout.icon)
     self._alert_text1_label.set_font_weight(FontWeight.MEDIUM if is_carrot else FontWeight.DISPLAY)
 
     color = rl.Color(255, 255, 255, int(255 * 0.9 * self._alpha_filter.x))

@@ -73,13 +73,13 @@ def speed_limit_pre_active_alert(CP: car.CarParams, CS: car.CarState, sm: messag
 
 
 def carrot_navi_camera_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  # Short form: the UI draws a camera / bump icon on the left, so only numbers are shown here
   cn = sm['longitudinalPlanSP'].carrotNavi
-  descr = cn.sdiDescr or "Speed camera"
   dist = cn.spdDist
-  dist_str = f"{dist / 1000:.1f} km" if dist >= 1000 else f"{dist} m"
-  limit_str = f"{cn.spdLimit} km/h · " if cn.spdLimit > 0 else ""
+  dist_str = f"{dist / 1000:.1f}km" if dist >= 1000 else f"{dist}m"
+  limit_str = f"{cn.spdLimit} · " if cn.spdLimit > 0 and cn.source != "bump" else ""
   return Alert(
-    f"{descr}: {limit_str}{dist_str}",
+    f"{limit_str}{dist_str}",
     "",
     AlertStatus.normal, AlertSize.small,
     Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2)
