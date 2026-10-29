@@ -64,7 +64,9 @@ class TestCarrotNaviState:
   def test_mobile_camera_mode(self):
     s = CarrotNaviState(CarrotSettings(speed_ctrl_mode=2))
     s.update_json(camera_msg(300, sdi_type=7))
-    assert s.step(25, 0).desired_speed == NO_LIMIT_KPH
+    out = s.step(25, 0)
+    assert out.desired_speed == NO_LIMIT_KPH
+    assert out.active == 3  # still alerted
     s = CarrotNaviState(CarrotSettings(speed_ctrl_mode=3))
     s.update_json(camera_msg(300, sdi_type=7))
     assert s.step(25, 0).desired_speed < NO_LIMIT_KPH
@@ -72,7 +74,9 @@ class TestCarrotNaviState:
   def test_mode_off(self):
     s = CarrotNaviState(CarrotSettings(speed_ctrl_mode=0))
     s.update_json(camera_msg(300))
-    assert s.step(25, 0).desired_speed == NO_LIMIT_KPH
+    out = s.step(25, 0)
+    assert out.desired_speed == NO_LIMIT_KPH
+    assert out.active == 3 and out.spd_dist == 300  # "Alerts Only" still shows the camera
 
   def test_section_enforcement(self):
     s = CarrotNaviState(CarrotSettings(safety_factor=1.0))
@@ -92,7 +96,22 @@ class TestCarrotNaviState:
   def test_speed_bump_ignored_on_highway(self):
     s = CarrotNaviState()
     s.update_json(camera_msg(100, sdi_type=22, limit=0, roadcate=0))
-    assert s.step(15, 0).desired_speed == NO_LIMIT_KPH
+    out = s.step(15, 0)
+    assert out.desired_speed == NO_LIMIT_KPH
+    assert out.active == 5  # alert still shown
+
+  def test_speed_bump_alert_only_when_mode_cameras(self):
+    s = CarrotNaviState(CarrotSettings(speed_ctrl_mode=1))
+    s.update_json(camera_msg(100, sdi_type=22, limit=0))
+    out = s.step(15, 0)
+    assert out.desired_speed == NO_LIMIT_KPH
+    assert out.active == 5 and out.spd_dist == 100
+
+  def test_speed_bump_via_plus_type(self):
+    s = CarrotNaviState()
+    s.update_json(camera_msg(500, sdi_type=-1, limit=0, nSdiPlusType=22, nSdiPlusDist=80))
+    out = s.step(15, 0)
+    assert out.active == 5 and out.spd_dist == 80 and out.desired_source == "bump"
 
   def test_road_limit_offset(self):
     s = CarrotNaviState(CarrotSettings(road_limit_offset=10))

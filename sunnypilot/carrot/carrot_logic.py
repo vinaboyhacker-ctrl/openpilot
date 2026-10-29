@@ -172,6 +172,7 @@ class CarrotNaviState:
     self.x_spd_limit = 0.0
     self.x_spd_dist = 0.0
     self.x_spd_type = -1
+    self.x_spd_slow = False  # alert is always shown; this says whether "Slow Down For" also slows for it
     self.x_turn_info = -1
     self.x_dist_to_turn = 0.0
 
@@ -242,24 +243,31 @@ class CarrotNaviState:
       self.x_dist_to_turn = float(self.n_tbt_dist)
 
   def _update_sdi(self) -> None:
+    """Cameras / sections / bumps are always detected (so the alert icon shows);
+    `CarrotNaviSpeedCtrlMode` only decides which of them the car also slows down for:
+    0 alerts only, 1 cameras, 2 + bumps, 3 + mobile cameras."""
     s = self.settings
-    if self.n_sdi_type in SDI_SPEED_CAMERA_TYPES and self.n_sdi_speed_limit > 0 and s.speed_ctrl_mode > 0:
+    if self.n_sdi_type in SDI_SPEED_CAMERA_TYPES and self.n_sdi_speed_limit > 0:
       self.x_spd_limit = self.n_sdi_speed_limit * s.safety_factor
       self.x_spd_dist = float(self.n_sdi_dist)
       self.x_spd_type = self.n_sdi_type
+      self.x_spd_slow = s.speed_ctrl_mode >= 1
       if self.n_sdi_block_type in (2, 3):  # inside / ending a section enforcement
         self.x_spd_dist = float(self.n_sdi_block_dist)
         self.x_spd_type = SDI_SECTION_ACTIVE
-      elif self.n_sdi_type == SDI_MOBILE_CAMERA and s.speed_ctrl_mode < 3:
-        self.x_spd_limit = self.x_spd_dist = 0
-    elif (SDI_SPEED_BUMP in (self.n_sdi_plus_type, self.n_sdi_type)) and self.roadcate > 1 and s.speed_ctrl_mode >= 2:
+      elif self.n_sdi_type == SDI_MOBILE_CAMERA:
+        self.x_spd_slow = s.speed_ctrl_mode >= 3
+    elif SDI_SPEED_BUMP in (self.n_sdi_plus_type, self.n_sdi_type):
       self.x_spd_limit = s.bump_speed
       self.x_spd_dist = float(self.n_sdi_plus_dist if self.n_sdi_plus_type == SDI_SPEED_BUMP else self.n_sdi_dist)
       self.x_spd_type = SDI_SPEED_BUMP
+      # never slow for "bumps" on highways (roadcate 0/1)
+      self.x_spd_slow = s.speed_ctrl_mode >= 2 and self.roadcate > 1
     else:
       self.x_spd_limit = 0
       self.x_spd_type = -1
       self.x_spd_dist = 0
+      self.x_spd_slow = False
 
   # ---------------------------------------------------------------- step
   def _turn_speed(self, x_turn_info: int, dist: float) -> float:
@@ -305,6 +313,7 @@ class CarrotNaviState:
     if self.x_spd_type < 0 or self.x_spd_dist <= 0:
       self.x_spd_type = -1
       self.x_spd_dist = self.x_spd_limit = 0
+      self.x_spd_slow = False
     if self.x_turn_info < 0 or self.x_dist_to_turn < -50:
       self.x_dist_to_turn = min(self.x_dist_to_turn, 0.0)
       self.x_turn_info = -1
@@ -325,6 +334,8 @@ class CarrotNaviState:
       if self.x_spd_type == SDI_SECTION_ACTIVE:
         sdi_speed = self.x_spd_limit
         active = 4
+      if not self.x_spd_slow:
+        sdi_speed = NO_LIMIT_KPH  # alert only
     sdi_source = "bump" if self.x_spd_type == SDI_SPEED_BUMP else "section" if self.x_spd_type == SDI_SECTION_ACTIVE else "cam"
 
     turn_speed = self._turn_speed(self.x_turn_info, self.x_dist_to_turn)
