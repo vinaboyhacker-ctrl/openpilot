@@ -96,9 +96,31 @@ class TestCarrotNaviState:
   def test_speed_bump_ignored_on_highway(self):
     s = CarrotNaviState()
     s.update_json(camera_msg(100, sdi_type=22, limit=0, roadcate=0))
-    out = s.step(15, 0)
+    out = s.step(20, 0)  # 72 km/h on a road reported as highway
     assert out.desired_speed == NO_LIMIT_KPH
     assert out.active == 5  # alert still shown
+
+  def test_speed_bump_roadcate_kept_when_missing(self):
+    s = CarrotNaviState(CarrotSettings(bump_speed=30))
+    s.update_json(camera_msg(150, sdi_type=22, limit=0, roadcate=6))
+    msg = camera_msg(140, sdi_type=22, limit=0)
+    del msg["roadcate"]
+    s.update_json(msg)  # a message without roadcate must not turn the road into a highway
+    out = s.step(70 / 3.6, 0)
+    assert out.desired_source == "bump" and out.desired_speed < NO_LIMIT_KPH
+
+  def test_speed_bump_highway_roadcate_but_slow(self):
+    s = CarrotNaviState(CarrotSettings(bump_speed=30))
+    s.update_json(camera_msg(100, sdi_type=22, limit=0, roadcate=0))
+    assert s.step(40 / 3.6, 0).desired_source == "bump"   # slow already -> still brake for it
+    s.update_json(camera_msg(100, sdi_type=22, limit=0, roadcate=0))
+    assert s.step(70 / 3.6, 0).desired_speed == NO_LIMIT_KPH  # highway speed on highway -> alert only
+
+  def test_speed_bump_never_from_high_speed(self):
+    s = CarrotNaviState(CarrotSettings(bump_speed=30))
+    s.update_json(camera_msg(300, sdi_type=22, limit=0, roadcate=6))
+    out = s.step(90 / 3.6, 0)
+    assert out.desired_speed == NO_LIMIT_KPH and out.active == 5
 
   def test_speed_bump_alert_only_when_mode_cameras(self):
     s = CarrotNaviState(CarrotSettings(speed_ctrl_mode=1))

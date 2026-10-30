@@ -18,6 +18,8 @@ ACTIVE_SDI_COUNT_MAX = 200  # 20 s since the last guidance (rgdata) message
 SDI_SPEED_CAMERA_TYPES = (0, 1, 2, 3, 4, 7, 8, 75, 76)
 SDI_MOBILE_CAMERA = 7
 SDI_SPEED_BUMP = 22
+BUMP_MAX_KPH = 80.         # never slow down for a "bump" above this speed
+BUMP_LOW_ROAD_KPH = 60.    # below this, slow for bumps even if roadcate says highway
 SDI_SECTION_ACTIVE = 4  # synthetic type used while inside a section (average speed) enforcement
 
 # TBT turn types -> (navType, modifier, xTurnInfo)
@@ -218,7 +220,8 @@ class CarrotNaviState:
     self.n_sdi_block_dist = _i(data.get("nSdiBlockDist"), 0)
     self.n_sdi_plus_type = _i(data.get("nSdiPlusType"), -1)
     self.n_sdi_plus_dist = _i(data.get("nSdiPlusDist"), 0)
-    self.roadcate = _i(data.get("roadcate"), 0)
+    if "roadcate" in data:  # not every app message carries it; keep the last known value
+      self.roadcate = _i(data.get("roadcate"), self.roadcate)
 
     self.n_tbt_dist = _i(data.get("nTBTDist"), 0)
     self.n_tbt_turn_type = _i(data.get("nTBTTurnType"), -1)
@@ -261,8 +264,8 @@ class CarrotNaviState:
       self.x_spd_limit = s.bump_speed
       self.x_spd_dist = float(self.n_sdi_plus_dist if self.n_sdi_plus_type == SDI_SPEED_BUMP else self.n_sdi_dist)
       self.x_spd_type = SDI_SPEED_BUMP
-      # never slow for "bumps" on highways (roadcate 0/1)
-      self.x_spd_slow = s.speed_ctrl_mode >= 2 and self.roadcate > 1
+      # speed checks (highway / too fast) are applied in step(), where v_ego is known
+      self.x_spd_slow = s.speed_ctrl_mode >= 2
     else:
       self.x_spd_limit = 0
       self.x_spd_type = -1
@@ -334,7 +337,12 @@ class CarrotNaviState:
       if self.x_spd_type == SDI_SECTION_ACTIVE:
         sdi_speed = self.x_spd_limit
         active = 4
-      if not self.x_spd_slow:
+      slow = self.x_spd_slow
+      if is_bump:
+        # bumps: never brake from highway speeds; on roads reported as highway (roadcate 0/1)
+        # only when already slow, since some app messages report 0 for ordinary roads
+        slow = slow and v_ego_kph < BUMP_MAX_KPH and (self.roadcate > 1 or v_ego_kph < BUMP_LOW_ROAD_KPH)
+      if not slow:
         sdi_speed = NO_LIMIT_KPH  # alert only
     sdi_source = "bump" if self.x_spd_type == SDI_SPEED_BUMP else "section" if self.x_spd_type == SDI_SECTION_ACTIVE else "cam"
 
