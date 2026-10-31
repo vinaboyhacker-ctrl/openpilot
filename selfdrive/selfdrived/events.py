@@ -375,7 +375,7 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "Touch Steering Wheel",
       "Driver Unresponsive",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.MID, VisualAlert.steerRequired, AudibleAlert.warningSoft, .1),
+      Priority.MID, VisualAlert.steerRequired, AudibleAlert.promptDistracted, .1),
   },
 
   EventName.driverUnresponsive3: {
