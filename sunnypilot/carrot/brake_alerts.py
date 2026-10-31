@@ -1,7 +1,9 @@
 """
 Brake sounds:
-  chime   - sunnypilot is braking hard on its own (pleasant single "ting", once per braking)
-  warning - braking is needed but the system will not (or cannot) brake: the driver must brake (harsh, repeats)
+  chime         - sunnypilot is braking hard on its own (pleasant single "ting", once per braking)
+  warning       - braking is needed but the system will not brake: the driver must brake (harsh, repeats)
+  icon_chime    - a camera / bump icon appears and sunnypilot will brake for it (single "ting")
+  icon_warning  - a camera / bump icon appears and sunnypilot will NOT brake for it (single harsh alert)
 
 Pure logic (no cereal), fed with plain values by the longitudinal planner at 20 Hz.
 """
@@ -26,16 +28,9 @@ LEAD_MIN_SPEED = 3.0        # m/s, no lead warnings while creeping in traffic
 STOP_MIN_SPEED = 8.0        # m/s (~30 km/h), below this the driver is clearly handling the stop
 STOP_TIME = 1.5             # s, condition must hold this long before warning
 
-# warning: speed camera / bump ahead, too fast, and the car is not slowing for it
-CARROT_TIME = 5.0           # s to the item
-CARROT_CAM_MARGIN = 3.0     # km/h over the camera limit
-CARROT_BUMP_MARGIN = 10.0   # km/h over the bump speed
-
 NOT_DECELERATING = -0.3     # m/s^2, aEgo above this means nobody is braking
 WARNING_HOLD = 1.0          # s, warning keeps sounding this long after the condition clears
 
-SPD_TYPE_BUMP = 22
-SPD_TYPE_SECTION = 4
 
 
 @dataclass
@@ -50,11 +45,8 @@ class BrakeInputs:
   lead_d: float = 0.
   lead_v: float = 0.
   model_stop: bool = False           # model speed at the end of its horizon ~ 0
-  carrot_item: bool = False          # camera / section / bump being approached
-  carrot_type: int = -1
-  carrot_limit: int = 0              # km/h, camera limit (bump speed for bumps)
-  carrot_dist: float = 0.            # m
-  carrot_braking: bool = False       # sunnypilot is slowing for the item
+  carrot_item: bool = False          # camera / section / bump icon is shown
+  carrot_braking: bool = False       # sunnypilot is slowing for that item (the red brake badge)
 
 
 def lead_required_decel(v_ego: float, lead_d: float, lead_v: float) -> float:
@@ -73,6 +65,9 @@ class BrakeAlerts:
     self._chime_armed = True
     self._stop_t = 0.
     self._warning_hold_t = 0.
+    self._icon_prev = False
+    self.icon_chime = False
+    self.icon_warning = False
 
   def _update_chime(self, i: BrakeInputs) -> bool:
     if i.long_active and i.accel_cmd <= CHIME_ACCEL and i.v_ego > CHIME_MIN_SPEED:
@@ -114,18 +109,17 @@ class BrakeAlerts:
     if self._stop_t >= STOP_TIME:
       return True
 
-    # speed camera / bump close ahead, too fast, and nothing is slowing the car
-    if i.carrot_item and not i.carrot_braking and i.carrot_dist > 0. and i.v_ego > 1.:
-      v_kph = i.v_ego * 3.6
-      target = None
-      if i.carrot_limit > 0 and i.carrot_type != SPD_TYPE_SECTION:
-        target = i.carrot_limit + (CARROT_BUMP_MARGIN if i.carrot_type == SPD_TYPE_BUMP else CARROT_CAM_MARGIN)
-      if target is not None and v_kph > target and i.carrot_dist / i.v_ego < CARROT_TIME and i.a_ego > NOT_DECELERATING:
-        return True
-
     return False
 
+  def _update_icon(self, i: BrakeInputs) -> None:
+    # one pulse on the frame the icon appears, whether or not sunnypilot brakes for it
+    appeared = i.carrot_item and not self._icon_prev
+    self._icon_prev = i.carrot_item
+    self.icon_chime = appeared and i.carrot_braking
+    self.icon_warning = appeared and not i.carrot_braking
+
   def update(self, i: BrakeInputs) -> None:
+    self._update_icon(i)
     self.chime = self._update_chime(i)
 
     if self._need_brake(i):

@@ -76,23 +76,6 @@ class TestWarning:
     ba = BrakeAlerts()
     assert run(ba, replace(CRUISE, model_stop=True, a_ego=-1.0), 3.)[1] == 0
 
-  def test_bump_too_fast_not_braking_warns(self):
-    # 25 m/s (90 km/h), bump 25 km/h, 80 m ahead: sunnypilot never brakes for bumps above 80 km/h
-    ba = BrakeAlerts()
-    i = replace(CRUISE, v_ego=25., carrot_item=True, carrot_type=22, carrot_limit=25, carrot_dist=80.)
-    assert run(ba, i, .2)[1] > 0
-
-  def test_bump_with_sunnypilot_braking_is_silent(self):
-    ba = BrakeAlerts()
-    i = replace(CRUISE, v_ego=12., carrot_item=True, carrot_type=22, carrot_limit=25, carrot_dist=40.,
-                carrot_braking=True)
-    assert run(ba, i, 1.)[1] == 0
-
-  def test_camera_under_limit_is_silent(self):
-    ba = BrakeAlerts()
-    i = replace(CRUISE, v_ego=15., carrot_item=True, carrot_type=1, carrot_limit=60, carrot_dist=50.)
-    assert run(ba, i, 1.)[1] == 0
-
   def test_warning_holds_then_clears(self):
     ba = BrakeAlerts()
     run(ba, replace(CRUISE, long_active=False, has_lead=True, lead_d=40., lead_v=0.), .2)
@@ -105,3 +88,46 @@ class TestWarning:
     i = replace(CRUISE, accel_cmd=-2.5, a_ego=-1.0, has_lead=True, lead_d=30., lead_v=0.)
     chimes, warnings = run(ba, i, 1.)
     assert chimes == 0 and warnings > 0
+
+
+class TestIcon:
+  def icon_pulses(self, ba, inputs, seconds):
+    chimes, warnings = 0, 0
+    for _ in range(int(round(seconds / DT))):
+      ba.update(inputs)
+      chimes += ba.icon_chime
+      warnings += ba.icon_warning
+    return chimes, warnings
+
+  def test_icon_without_sunnypilot_braking_warns_once(self):
+    ba = BrakeAlerts()
+    i = replace(CRUISE, carrot_item=True, carrot_braking=False)
+    assert self.icon_pulses(ba, i, 3.) == (0, 1)
+
+  def test_icon_with_sunnypilot_braking_chimes_once(self):
+    ba = BrakeAlerts()
+    i = replace(CRUISE, carrot_item=True, carrot_braking=True)
+    assert self.icon_pulses(ba, i, 3.) == (1, 0)
+
+  def test_icon_sounds_even_when_driver_brakes(self):
+    ba = BrakeAlerts()
+    i = replace(CRUISE, carrot_item=True, carrot_braking=False, brake_pressed=True)
+    assert self.icon_pulses(ba, i, .5) == (0, 1)
+
+  def test_icon_reappearing_sounds_again(self):
+    ba = BrakeAlerts()
+    shown = replace(CRUISE, carrot_item=True, carrot_braking=False)
+    hidden = replace(CRUISE, carrot_item=False)
+    assert self.icon_pulses(ba, shown, 1.) == (0, 1)
+    assert self.icon_pulses(ba, hidden, 1.) == (0, 0)
+    assert self.icon_pulses(ba, shown, 1.) == (0, 1)
+
+  def test_no_icon_no_sound(self):
+    ba = BrakeAlerts()
+    assert self.icon_pulses(ba, CRUISE, 2.) == (0, 0)
+
+  def test_later_braking_does_not_replay_icon_sound(self):
+    # the icon sound is decided when the icon appears; later braking does not replay it
+    ba = BrakeAlerts()
+    assert self.icon_pulses(ba, replace(CRUISE, carrot_item=True, carrot_braking=False), .5) == (0, 1)
+    assert self.icon_pulses(ba, replace(CRUISE, carrot_item=True, carrot_braking=True), 1.) == (0, 0)

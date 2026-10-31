@@ -95,9 +95,9 @@ class LongitudinalPlannerSP:
     CS = sm['carState']
     CC = sm['carControl']
     lead = sm['radarState'].leadOne
+    carrot_source = "bump" if self.carrot.spd_type == 22 else "section" if self.carrot.spd_type == 4 else "cam"
     model_v = sm['modelV2'].velocity.x
     cn = sm['carrotManSP'] if self.carrot.enabled and sm.alive['carrotManSP'] else None
-    carrot_source = "bump" if self.carrot.spd_type == 22 else "section" if self.carrot.spd_type == 4 else "cam"
     self.brake_alerts.update(BrakeInputs(
       v_ego=float(v_ego),
       a_ego=float(a_ego),
@@ -110,14 +110,13 @@ class LongitudinalPlannerSP:
       lead_v=float(lead.vLead),
       model_stop=len(model_v) > 0 and float(model_v[-1]) < 1.0,
       carrot_item=cn is not None and bool(cn.connected) and int(cn.active) in (3, 4, 5),
-      carrot_type=int(self.carrot.spd_type),
-      carrot_limit=int(self.carrot.spd_limit),
-      carrot_dist=float(self.carrot.spd_dist),
       carrot_braking=bool(self.carrot.is_active) and self.carrot.source == carrot_source,
     ))
     if self.brake_alerts.warning:
       self.events_sp.add(EventNameSP.brakeWarning)
-    elif self.brake_alerts.chime:
+    elif self.brake_alerts.icon_warning:
+      self.events_sp.add(EventNameSP.carrotIconWarning)
+    elif self.brake_alerts.icon_chime or self.brake_alerts.chime:
       self.events_sp.add(EventNameSP.brakeChime)
 
   def update(self, sm: messaging.SubMaster) -> None:

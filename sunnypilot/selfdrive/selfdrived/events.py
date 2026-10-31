@@ -270,6 +270,15 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
       Priority.MID, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 1.),
   },
 
+  # a camera / bump icon appeared and sunnypilot will not brake for it: single harsh alert
+  EventNameSP.carrotIconWarning: {
+    ET.PERMANENT: Alert(
+      "BRAKE!",
+      "",
+      AlertStatus.critical, AlertSize.small,
+      Priority.HIGH, VisualAlert.none, AudibleAlert.warningImmediate, 2.),
+  },
+
   # braking is needed but the system will not brake: harsh repeating warning
   EventNameSP.brakeWarning: {
     ET.PERMANENT: Alert(

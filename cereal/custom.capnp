@@ -367,6 +367,7 @@ struct OnroadEventSP @0xda96579883444c35 {
     carrotNaviCamera @24;
     brakeChime @25;
     brakeWarning @26;
+    carrotIconWarning @27;
   }
 }
 
