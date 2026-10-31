@@ -29,8 +29,15 @@ def test_no_action_without_terminal_or_engagement():
   assert not m.active
 
 
-def test_moves_to_shoulder_when_slow_and_right_clear():
+def test_stays_in_lane_by_default_even_when_slow():
   m = MinimalRiskManeuver()
+  run(m, replace(TERMINAL, v_ego=15.), 3.)
+  assert m.state == MrmState.stop_in_lane
+  assert m.curv_offset == 0
+
+
+def test_moves_to_shoulder_when_slow_and_right_clear():
+  m = MinimalRiskManeuver(allow_shoulder=True)
   run(m, replace(TERMINAL, v_ego=15.), 0.1)
   assert m.state == MrmState.to_shoulder
   run(m, replace(TERMINAL, v_ego=15.), 3.)
@@ -46,7 +53,7 @@ def test_stays_in_lane_at_high_speed_until_slow():
 
 
 def test_right_blindspot_aborts_shoulder_and_unwinds():
-  m = MinimalRiskManeuver()
+  m = MinimalRiskManeuver(allow_shoulder=True)
   run(m, replace(TERMINAL, v_ego=15.), 3.)
   assert m.state == MrmState.to_shoulder
   run(m, replace(TERMINAL, v_ego=15., right_blindspot=True), 0.1)

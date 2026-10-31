@@ -45,7 +45,8 @@ class MrmInputs:
 
 
 class MinimalRiskManeuver:
-  def __init__(self):
+  def __init__(self, allow_shoulder: bool = False):
+    self.allow_shoulder = allow_shoulder  # off: stop in lane only
     self.state = MrmState.idle
     self.v_target = 0.              # m/s, decelerating profile
     self.curv_offset = 0.           # 1/m, added to the lane curvature
@@ -79,7 +80,7 @@ class MinimalRiskManeuver:
 
     if self.state == MrmState.stop_in_lane:
       self.curv_offset = min(0., self.curv_offset + SHOULDER_CURV_RATE * DT)
-      if i.v_ego <= SHOULDER_MAX_V and not i.right_blindspot:
+      if self.allow_shoulder and i.v_ego <= SHOULDER_MAX_V and not i.right_blindspot:
         self.state = MrmState.to_shoulder
 
     elif self.state == MrmState.to_shoulder:

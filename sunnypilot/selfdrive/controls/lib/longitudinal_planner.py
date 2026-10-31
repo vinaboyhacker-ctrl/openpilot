@@ -5,7 +5,7 @@ This file is part of sunnypilot and is licensed under the MIT License.
 See the LICENSE.md file in the root directory for more details.
 """
 
-from cereal import messaging, custom
+from cereal import messaging, custom, log
 from opendbc.car import structs
 from openpilot.common.constants import CV
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX
@@ -19,9 +19,11 @@ from openpilot.sunnypilot.models.helpers import get_active_bundle
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.carrot.carrot_planner import CarrotNaviPlanner
 from openpilot.sunnypilot.carrot.brake_alerts import BrakeAlerts, BrakeInputs
+from openpilot.sunnypilot.selfdrive.controls.lib.minimal_risk_maneuver import MinimalRiskManeuver, MrmInputs
 
 DecState = custom.LongitudinalPlanSP.DynamicExperimentalControl.DynamicExperimentalControlState
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
+DM_ALERT_THREE = log.DriverMonitoringState.AlertLevel.three
 EventNameSP = custom.OnroadEventSP.EventName
 
 class LongitudinalPlannerSP:
@@ -32,6 +34,7 @@ class LongitudinalPlannerSP:
     self.scc = SmartCruiseControl()
     self.carrot = CarrotNaviPlanner()
     self.brake_alerts = BrakeAlerts()
+    self.mrm = MinimalRiskManeuver()
     self.sla = SpeedLimitAssist(CP, CP_SP)
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
     self.source = LongitudinalPlanSource.cruise
@@ -89,6 +92,20 @@ class LongitudinalPlannerSP:
 
     self.source = min(targets, key=lambda k: targets[k][0])
     self.output_v_target, self.output_a_target = targets[self.source]
+
+    # driver not responding (monitoring level three): keep ACC and lane keeping, slow to a stop in lane
+    CS_mrm = sm['carState']
+    self.mrm.update(MrmInputs(
+      dm_terminal=sm['driverMonitoringState'].alertLevel == DM_ALERT_THREE,
+      engaged=bool(long_enabled),
+      v_ego=float(v_ego),
+      driver_steer_override=bool(CS_mrm.steeringPressed),
+      brake_pressed=bool(CS_mrm.brakePressed),
+      gas_pressed=bool(CS_mrm.gasPressed),
+    ))
+    if self.mrm.active:
+      self.output_v_target = min(self.output_v_target, self.mrm.v_target)
+      self.source = LongitudinalPlanSource.cruise
     return self.output_v_target, self.output_a_target
 
   def update_brake_alerts(self, sm: messaging.SubMaster, v_ego: float, a_ego: float) -> None:
