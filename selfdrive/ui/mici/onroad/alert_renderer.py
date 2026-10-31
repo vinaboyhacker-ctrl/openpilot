@@ -287,6 +287,10 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
     # alert_type format is "EventName/eventType" (e.g., "preLaneChangeLeft/warning")
     event_name = alert.alert_type.split('/')[0] if alert.alert_type else ''
 
+    # camera / bump / brake icons: no full-screen shade, the camera view stays visible
+    if event_name.startswith(('carrotNavi', 'brake')) or event_name == 'carrotIconWarning':
+      return
+
     if event_name == 'preLaneChangeLeft':
       bg_height = small_alert_height
     elif event_name == 'preLaneChangeRight':
@@ -333,12 +337,12 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
   def _draw_brake_badge(self, cx: float, cy: float) -> None:
     # red circle with "!" (like a brake warning lamp): sunnypilot will slow down for this item
     a = int(255 * self._alpha_filter.x)
-    r = 15
+    r = 9
     rl.draw_circle(int(cx), int(cy), r + 2, rl.Color(0, 0, 0, a))
     rl.draw_circle(int(cx), int(cy), r, rl.Color(230, 30, 30, a))
     white = rl.Color(255, 255, 255, a)
-    rl.draw_rectangle(int(cx - 2), int(cy - 9), 5, 11, white)
-    rl.draw_rectangle(int(cx - 2), int(cy + 4), 5, 4, white)
+    rl.draw_rectangle(int(cx - 1), int(cy - 5), 3, 6, white)
+    rl.draw_rectangle(int(cx - 1), int(cy + 2), 3, 3, white)
 
   def _draw_text(self, alert: Alert, alert_layout: AlertLayout) -> None:
     icon_side = alert_layout.icon.side if alert_layout.icon is not None else None
@@ -362,8 +366,8 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
     # CarrotMan camera/bump alerts: icon on the left + numbers only, thinner font
     is_carrot = alert.alert_type.startswith('carrotNavi') if alert.alert_type else False
     if is_carrot:
-      font_size = 54  # short numeric text; leaves the right side free for the stop indicator
-      icon_size = 72
+      font_size = 34  # short numeric text, kept small so it does not hide the road
+      icon_size = 40
       icon_x = alert_layout.text_rect.x
       icon_y = alert_layout.text_rect.y + 6
       # icon follows the TMAP item type (not the planner source, which is "none" when only alerting)
@@ -378,9 +382,9 @@ class AlertRenderer(Widget, SpeedLimitAlertRenderer):
         source = "cam"
       self._draw_carrot_icon(source, icon_x, icon_y, icon_size)
       if will_brake:
-        self._draw_brake_badge(icon_x + icon_size - 8, icon_y + icon_size - 8)
+        self._draw_brake_badge(icon_x + icon_size - 5, icon_y + icon_size - 5)
       alert_layout = AlertLayout(rl.Rectangle(icon_x + icon_size + 16, alert_layout.text_rect.y,
-                                              alert_layout.text_rect.width - icon_size - 16, alert_layout.text_rect.height),
+                                              alert_layout.text_rect.width - icon_size - 10, alert_layout.text_rect.height),
                                  alert_layout.icon)
     self._alert_text1_label.set_font_weight(FontWeight.MEDIUM if is_carrot else FontWeight.DISPLAY)
 
