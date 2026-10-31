@@ -194,3 +194,12 @@ class TestCarrotNaviState:
 def test_normalize_rgdata():
   data = normalize_rgdata({"nRoadLimitSpeed": 60, "sdi": {"nSdiType": 1, "nSdiDist": 300}, "guidance": {"nTBTDist": 10}})
   assert data["nSdiType"] == 1 and data["nSdiDist"] == 300 and data["nTBTDist"] == 10
+
+
+class TestBumpApproach:
+  def test_gentler_decel_starts_slowing_earlier(self):
+    # same bump (25 km/h, 100 m ahead): the gentler profile allows less speed at this distance
+    gentle = calculate_current_speed(100, 25, 1.0, 0.9)
+    normal = calculate_current_speed(100, 25, 1.0, 1.2)
+    assert gentle < normal
+    assert gentle < 60

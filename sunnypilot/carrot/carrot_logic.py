@@ -20,6 +20,7 @@ SDI_MOBILE_CAMERA = 7
 SDI_SPEED_BUMP = 22
 BUMP_MAX_KPH = 80.         # never slow down for a "bump" above this speed
 BUMP_LOW_ROAD_KPH = 60.    # below this, slow for bumps even if roadcate says highway
+BUMP_DECEL_RATE = 0.9      # m/s^2, gentler approach for bumps so the car starts slowing well before them
 SDI_SECTION_ACTIVE = 4  # synthetic type used while inside a section (average speed) enforcement
 
 # TBT turn types -> (navType, modifier, xTurnInfo)
@@ -332,7 +333,8 @@ class CarrotNaviState:
     if self.x_spd_limit > 0 and self.x_spd_dist > 0 and active > 0:
       is_bump = self.x_spd_type == SDI_SPEED_BUMP
       safe_sec = s.bump_time_s if is_bump else s.speed_ctrl_end_s
-      sdi_speed = calculate_current_speed(self.x_spd_dist, self.x_spd_limit, safe_sec, s.decel_rate)
+      decel = min(s.decel_rate, BUMP_DECEL_RATE) if is_bump else s.decel_rate
+      sdi_speed = calculate_current_speed(self.x_spd_dist, self.x_spd_limit, safe_sec, decel)
       active = 5 if is_bump else 3
       if self.x_spd_type == SDI_SECTION_ACTIVE:
         sdi_speed = self.x_spd_limit
