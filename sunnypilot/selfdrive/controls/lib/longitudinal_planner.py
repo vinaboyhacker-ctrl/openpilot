@@ -18,9 +18,11 @@ from openpilot.sunnypilot.selfdrive.selfdrived.events import EventsSP
 from openpilot.sunnypilot.models.helpers import get_active_bundle
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.carrot.carrot_planner import CarrotNaviPlanner
+from openpilot.sunnypilot.carrot.brake_alerts import BrakeAlerts, BrakeInputs
 
 DecState = custom.LongitudinalPlanSP.DynamicExperimentalControl.DynamicExperimentalControlState
 LongitudinalPlanSource = custom.LongitudinalPlanSP.LongitudinalPlanSource
+EventNameSP = custom.OnroadEventSP.EventName
 
 class LongitudinalPlannerSP:
   def __init__(self, CP: structs.CarParams, CP_SP: structs.CarParamsSP, mpc):
@@ -29,6 +31,7 @@ class LongitudinalPlannerSP:
     self.dec = DynamicExperimentalController(CP, mpc)
     self.scc = SmartCruiseControl()
     self.carrot = CarrotNaviPlanner()
+    self.brake_alerts = BrakeAlerts()
     self.sla = SpeedLimitAssist(CP, CP_SP)
     self.generation = int(model_bundle.generation) if (model_bundle := get_active_bundle()) else None
     self.source = LongitudinalPlanSource.cruise
@@ -71,6 +74,11 @@ class LongitudinalPlannerSP:
       cloudlog.exception("carrot: planner update failed")
       self.carrot.reset_outputs(a_ego)
 
+    try:
+      self.update_brake_alerts(sm, v_ego, a_ego)
+    except Exception:
+      cloudlog.exception("brake alerts: update failed")
+
     targets = {
       LongitudinalPlanSource.cruise: (v_cruise, a_ego),
       LongitudinalPlanSource.sccVision: (self.scc.vision.output_v_target, self.scc.vision.output_a_target),
@@ -82,6 +90,35 @@ class LongitudinalPlannerSP:
     self.source = min(targets, key=lambda k: targets[k][0])
     self.output_v_target, self.output_a_target = targets[self.source]
     return self.output_v_target, self.output_a_target
+
+  def update_brake_alerts(self, sm: messaging.SubMaster, v_ego: float, a_ego: float) -> None:
+    CS = sm['carState']
+    CC = sm['carControl']
+    lead = sm['radarState'].leadOne
+    model_v = sm['modelV2'].velocity.x
+    cn = sm['carrotManSP'] if self.carrot.enabled and sm.alive['carrotManSP'] else None
+    carrot_source = "bump" if self.carrot.spd_type == 22 else "section" if self.carrot.spd_type == 4 else "cam"
+    self.brake_alerts.update(BrakeInputs(
+      v_ego=float(v_ego),
+      a_ego=float(a_ego),
+      brake_pressed=bool(CS.brakePressed),
+      long_active=bool(CC.longActive),
+      experimental=bool(sm['selfdriveState'].experimentalMode),
+      accel_cmd=float(CC.actuators.accel),
+      has_lead=bool(lead.status),
+      lead_d=float(lead.dRel),
+      lead_v=float(lead.vLead),
+      model_stop=len(model_v) > 0 and float(model_v[-1]) < 1.0,
+      carrot_item=cn is not None and bool(cn.connected) and int(cn.active) in (3, 4, 5),
+      carrot_type=int(self.carrot.spd_type),
+      carrot_limit=int(self.carrot.spd_limit),
+      carrot_dist=float(self.carrot.spd_dist),
+      carrot_braking=bool(self.carrot.is_active) and self.carrot.source == carrot_source,
+    ))
+    if self.brake_alerts.warning:
+      self.events_sp.add(EventNameSP.brakeWarning)
+    elif self.brake_alerts.chime:
+      self.events_sp.add(EventNameSP.brakeChime)
 
   def update(self, sm: messaging.SubMaster) -> None:
     self.events_sp.clear()

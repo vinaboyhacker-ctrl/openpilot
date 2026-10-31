@@ -260,4 +260,22 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   EventNameSP.carrotNaviCamera: {
     ET.PERMANENT: carrot_navi_camera_alert,
   },
+
+  # sunnypilot is braking hard on its own: pleasant single chime
+  EventNameSP.brakeChime: {
+    ET.PERMANENT: Alert(
+      "",
+      "",
+      AlertStatus.normal, AlertSize.none,
+      Priority.MID, VisualAlert.none, AudibleAlertSP.promptSingleHigh, 1.),
+  },
+
+  # braking is needed but the system will not brake: harsh repeating warning
+  EventNameSP.brakeWarning: {
+    ET.PERMANENT: Alert(
+      "BRAKE!",
+      "",
+      AlertStatus.critical, AlertSize.small,
+      Priority.HIGH, VisualAlert.none, AudibleAlert.warningImmediate, .5),
+  },
 }
