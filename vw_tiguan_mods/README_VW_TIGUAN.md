@@ -18,7 +18,7 @@ Nhánh gốc: `carrot-base` @ 64a1776. Nhánh này = bản gốc + toàn bộ ch
 | 19/11 | Tự bật điều khiển ngang (MADS) khi nổ máy nếu ACC main đã bật sẵn (gửi `lkasEnable` 1 lần khi sẵn sàng + số tiến + nhả phanh) | `sunnypilot/mads/mads.py` |
 
 Cài đặt (param) đang dùng: `Mads=1`, `MadsMainCruiseAllowed=1`, `MadsUnifiedEngagementMode=1`,
-`CustomAccIncrementsEnabled=1` (ngắn 1 / dài 5), `LongitudinalPersonality=0` (relaxed),
+`CustomAccIncrementsEnabled=1` (ngắn 1 / dài 5), `LongitudinalPersonality=2` (relaxed; 0=aggressive, 1=standard),
 `ExperimentalMode=1`, `DynamicExperimentalControl=1`, `AlphaLongitudinalEnabled=1`.
 
 **Không thay đổi** logic lực phanh / ga / đánh lái. Code mới bọc try/except.
