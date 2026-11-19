@@ -16,12 +16,13 @@ Nhánh gốc: `carrot-base` @ 64a1776. Nhánh này = bản gốc + toàn bộ ch
 | – | Phát hình qua Comma4-UI-Streamer | `launch_env.sh` (STREAM=1, QUALITY=100, FPS=20) |
 | 19/11 | SET/RES nhấn ngắn (<0.5s) khi đang engage: SET −1 km/h, RES +1 km/h (giống VW gốc). Lần đầu: SET = tốc độ xe, RES = tốc độ cũ. `V_CRUISE_INITIAL` = 10 | `selfdrive/car/cruise.py` |
 | 19/11 | Tự bật điều khiển ngang (MADS) khi nổ máy nếu ACC main đã bật sẵn (gửi `lkasEnable` 1 lần khi sẵn sàng + số tiến + nhả phanh) | `sunnypilot/mads/mads.py` |
+| 19/11 | Planner an toàn hơn: Relaxed bám 2.2 s (gốc 1.75), dừng cách xe trước ~8 m (gốc 6 m) bằng cách dời vị trí xe trước 2 m trước khi vào solver (STOP_DISTANCE đã biên dịch, không đổi). Không đổi ACCEL_MIN | `selfdrive/controls/lib/longitudinal_mpc_lib/long_mpc.py` |
 
 Cài đặt (param) đang dùng: `Mads=1`, `MadsMainCruiseAllowed=1`, `MadsUnifiedEngagementMode=1`,
 `CustomAccIncrementsEnabled=1` (ngắn 1 / dài 5), `LongitudinalPersonality=2` (relaxed; 0=aggressive, 1=standard),
 `ExperimentalMode=1`, `DynamicExperimentalControl=1`, `AlphaLongitudinalEnabled=1`.
 
-**Không thay đổi** logic lực phanh / ga / đánh lái. Code mới bọc try/except.
+**Không thay đổi** lực phanh / ga / đánh lái (riêng planner: chỉ tăng khoảng cách bám, chủ xe đồng ý 19/11). Code mới bọc try/except.
 
 ## Cài lại từ nhánh này lên comma
 ```
@@ -36,6 +37,7 @@ cd opendbc_repo && git apply ../vw_tiguan_mods/opendbc_volkswagen_carstate.patch
 cd /data/openpilot
 PYTHONPATH=. /usr/local/venv/bin/python3 vw_tiguan_mods/tests/test_setres.py selfdrive/car/cruise.py
 PYTHONPATH=. /usr/local/venv/bin/python3 vw_tiguan_mods/tests/test_mads_start.py sunnypilot/mads/mads.py
+PYTHONPATH=. /usr/local/venv/bin/python3 vw_tiguan_mods/tests/test_gap.py <long_mpc_goc.py> selfdrive/controls/lib/longitudinal_mpc_lib/long_mpc.py
 ```
 
 ## Radar (đang nghiên cứu, chỉ đọc log)

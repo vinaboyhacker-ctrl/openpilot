@@ -55,6 +55,9 @@ FCW_IDXS = T_IDXS < 5.0
 T_DIFFS = np.diff(T_IDXS, prepend=[0.])
 COMFORT_BRAKE = 2.5
 STOP_DISTANCE = 6.0
+# SP: cach xe truoc them 2 m khi dung (6 -> 8 m). STOP_DISTANCE da bien dich vao solver acados,
+# nen doi vi tri xe truoc (that) lai gan hon 2 m truoc khi dua vao solver -> tuong duong 8 m.
+SP_EXTRA_STOP_DISTANCE = 2.0
 CRUISE_MIN_ACCEL = -1.2
 CRUISE_MAX_ACCEL = 1.6
 MIN_X_LEAD_FACTOR = 0.5
@@ -72,7 +75,7 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
 
 def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard):
   if personality==log.LongitudinalPersonality.relaxed:
-    return 1.75
+    return 2.2  # SP: Tiguan an toan (goc 1.75)
   elif personality==log.LongitudinalPersonality.standard:
     return 1.45
   elif personality==log.LongitudinalPersonality.aggressive:
@@ -326,6 +329,13 @@ class LongitudinalMpc:
     # and then treat that as a stopped car/obstacle at this new distance.
     lead_0_obstacle = lead_xv_0[:,0] + get_stopped_equivalence_factor(lead_xv_0[:,1])
     lead_1_obstacle = lead_xv_1[:,0] + get_stopped_equivalence_factor(lead_xv_1[:,1])
+    try:
+      if radarstate.leadOne.status:
+        lead_0_obstacle = lead_0_obstacle - SP_EXTRA_STOP_DISTANCE
+      if radarstate.leadTwo.status:
+        lead_1_obstacle = lead_1_obstacle - SP_EXTRA_STOP_DISTANCE
+    except Exception:
+      pass
 
     # Fake an obstacle for cruise, this ensures smooth acceleration to set speed
     # when the leads are no factor.
