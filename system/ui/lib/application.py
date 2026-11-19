@@ -216,6 +216,7 @@ class GuiApplication(GuiApplicationExt):
     self._scaled_height += self._scaled_height % 2
 
     self._render_texture: rl.RenderTexture | None = None
+    self._ui_stream = None
     self._burn_in_shader: rl.Shader | None = None
     self._ffmpeg_proc: subprocess.Popen | None = None
     self._ffmpeg_queue: queue.Queue | None = None
@@ -324,6 +325,22 @@ class GuiApplication(GuiApplicationExt):
       # four display runs slightly faster than 60 FPS, let it dictate rate so we don't drift and drop frames
       vblank_control = HARDWARE.get_device_type() == 'mici'
       rl.set_target_fps(0 if OFFSCREEN or vblank_control else fps)
+
+      if os.getenv("STREAM") == "1":
+          try:
+              import sys as _sys
+              _sys.path.insert(0, "/data")
+              import ui_stream
+              self._ui_stream = ui_stream
+              if self._render_texture is None:
+                  self._render_texture = rl.load_render_texture(self._width, self._height)
+                  rl.set_texture_filter(self._render_texture.texture, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
+              port = int(os.getenv("STREAM_PORT", "8082"))
+              ui_stream.start(port)
+              cloudlog.warning(f"MJPEG stream on port {port}")
+          except Exception as e:
+              cloudlog.error(f"Stream init failed: {e}")
+              self._ui_stream = None
 
       self._target_fps = fps
       self._set_styles()
@@ -671,6 +688,9 @@ class GuiApplication(GuiApplicationExt):
           data = bytes(rl.ffi.buffer(image.data, data_size))
           self._ffmpeg_queue.put(data)  # Async write via background thread
           rl.unload_image(image)
+        if self._ui_stream is not None and self._render_texture is not None:
+            self._ui_stream.capture_frame(self, int(os.getenv("STREAM_QUALITY", "50")), int(os.getenv("STREAM_FPS", "20")))
+
 
         self._monitor_fps()
         self._frame += 1

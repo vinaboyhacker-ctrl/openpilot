@@ -12,6 +12,7 @@ from opendbc.car.hyundai.values import HyundaiFlags
 from openpilot.common.params import Params
 from openpilot.sunnypilot.mads.helpers import MadsSteeringModeOnBrake, read_steering_mode_param, MADS_NO_ACC_MAIN_BUTTON
 from openpilot.sunnypilot.mads.state import StateMachine, GEARS_ALLOW_PAUSED_SILENT
+from openpilot.selfdrive.selfdrived.events import ET
 
 State = custom.ModularAssistiveDrivingSystem.ModularAssistiveDrivingSystemState
 ButtonType = structs.CarState.ButtonEvent.Type
@@ -56,6 +57,28 @@ class ModularAssistiveDrivingSystem:
     self.main_enabled_toggle = self.params.get_bool("MadsMainCruiseAllowed")
     self.steering_mode_on_brake = read_steering_mode_param(self.CP, self.CP_SP, self.params)
     self.unified_engagement_mode = self.params.get_bool("MadsUnifiedEngagementMode")
+
+    # SP: ACC main da bat san luc no may (canh len xay ra khi selfdrived dang khoi dong -> bi bo qua).
+    # Gui lkasEnable 1 lan / 1 lan no may khi da san sang. selfdrived chi chay onroad -> tu dat lai.
+    self._sp_auto_lkas_pending = True
+
+  def _sp_auto_lkas_on_start(self, CS: structs.CarState) -> None:
+    if not self._sp_auto_lkas_pending or not self.main_enabled_toggle:
+      return
+    if self.enabled:
+      self._sp_auto_lkas_pending = False  # da bat (bang canh len binh thuong hoac nguoi lai)
+      return
+    if not self.selfdrive.initialized:
+      return  # cho khoi dong xong, giu co
+    if not CS.cruiseState.available:
+      self._sp_auto_lkas_pending = False  # ACC main tat -> de co che goc (bat main) xu ly
+      return
+    if CS.gearShifter in (GearShifter.park, GearShifter.reverse, GearShifter.neutral) or CS.brakePressed:
+      return  # cho vao so tien va nha phanh, tranh canh bao "khong the bat"
+    if self.state_machine.check_contains(ET.NO_ENTRY):
+      return
+    self.events_sp.add(EventNameSP.lkasEnable)
+    self._sp_auto_lkas_pending = False  # chi 1 lan
 
   def read_params(self):
     self.main_enabled_toggle = self.params.get_bool("MadsMainCruiseAllowed")
@@ -184,6 +207,11 @@ class ModularAssistiveDrivingSystem:
       self.events.remove(EventName.buttonEnable)
       if self.selfdrive.CS_prev.cruiseState.available:
         self.events_sp.add(EventNameSP.lkasDisable)
+
+    try:
+      self._sp_auto_lkas_on_start(CS)
+    except Exception:
+      pass
 
     if self.steering_mode_on_brake == MadsSteeringModeOnBrake.DISENGAGE:
       if self.pedal_pressed_non_gas_pressed(CS):

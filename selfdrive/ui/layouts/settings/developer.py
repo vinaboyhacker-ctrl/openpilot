@@ -187,11 +187,18 @@ class DeveloperLayout(Widget):
     self._params.put_bool("LongitudinalManeuverMode", False, block=True)
     self._long_maneuver_toggle.action_item.set_state(False)
 
+  def _sp_set_alpha(self, state: bool):
+    try:
+      from openpilot.sunnypilot.system.pending_params import set_target_bool
+      set_target_bool(self._params, "AlphaLongitudinalEnabled", state)  # SP: deferred while onroad
+    except Exception:
+      self._params.put_bool("AlphaLongitudinalEnabled", state, block=True)
+
   def _on_alpha_long_enabled(self, state: bool):
     if state:
       def confirm_callback(result: DialogResult):
         if result == DialogResult.CONFIRM:
-          self._params.put_bool("AlphaLongitudinalEnabled", True, block=True)
+          self._sp_set_alpha(True)
           self._params.put_bool("OnroadCycleRequested", True, block=True)
           self._update_toggles()
         else:
@@ -205,6 +212,6 @@ class DeveloperLayout(Widget):
       gui_app.push_widget(dlg)
 
     else:
-      self._params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      self._sp_set_alpha(False)
       self._params.put_bool("OnroadCycleRequested", True, block=True)
       self._update_toggles()

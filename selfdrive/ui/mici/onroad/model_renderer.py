@@ -63,6 +63,12 @@ class ModelRenderer(Widget, ModelRendererSP):
     self._road_edge_stds = np.zeros(2, dtype=np.float32)
     self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
     self._path_offset_z = HEIGHT_INIT[0]
+    # SP: lead distance label on the camera view (display only)
+    self._sp_lead_pt = None
+    self._sp_lead_x = FirstOrderFilter(0.0, 0.15, 1 / gui_app.target_fps)
+    self._sp_lead_y = FirstOrderFilter(0.0, 0.15, 1 / gui_app.target_fps)
+    self._sp_lead_d = FirstOrderFilter(0.0, 0.2, 1 / gui_app.target_fps)
+    self._sp_lead_a = FirstOrderFilter(0.0, 0.1, 1 / gui_app.target_fps)
 
     # Initialize ModelPoints objects
     self._path = ModelPoints()
@@ -156,6 +162,11 @@ class ModelRenderer(Widget, ModelRendererSP):
     # if render_lead_indicator and radar_state:
     #   self._draw_lead_indicator()
 
+    try:
+      self._sp_draw_lead_distance(lead_one if render_lead_indicator else None)
+    except Exception:
+      pass
+
   def _update_raw_points(self, model):
     """Update raw 3D points from model data"""
     self._path.raw_points = np.array([model.position.x, np.array(model.position.y) + self._camera_offset, model.position.z], dtype=np.float32).T
@@ -173,6 +184,7 @@ class ModelRenderer(Widget, ModelRendererSP):
   def _update_leads(self, radar_state, path_x_array):
     """Update positions of lead vehicles"""
     self._lead_vehicles = [LeadVehicle(), LeadVehicle()]
+    self._sp_lead_pt = None
     leads = [radar_state.leadOne, radar_state.leadTwo]
 
     for i, lead_data in enumerate(leads):
@@ -185,6 +197,12 @@ class ModelRenderer(Widget, ModelRendererSP):
         point = self._map_to_screen(d_rel, -y_rel + self._camera_offset, z + self._path_offset_z)
         if point:
           self._lead_vehicles[i] = self._update_lead_vehicle(d_rel, v_rel, point, self._rect)
+          if i == 0:
+            try:
+              lv = self._lead_vehicles[0]
+              self._sp_lead_pt = (lv.chevron[1][0], lv.chevron[0][1]) if lv.chevron else None
+            except Exception:
+              self._sp_lead_pt = None
 
   def _update_model(self, lead, path_x_array):
     """Update model visualization data based on model message"""
@@ -372,6 +390,32 @@ class ModelRenderer(Widget, ModelRendererSP):
         draw_polygon(self._rect, path_pts, rl.Color(0, 0, 0, 90))
       else:
         draw_polygon(self._rect, path_pts, gradient=gradient)
+
+  def _sp_draw_lead_distance(self, lead):
+    """StarPilot-style: distance in metres just below the lead car on the camera view."""
+    show = bool(lead is not None and lead.status and self._sp_lead_pt is not None)
+    if show:
+      x, y = self._sp_lead_pt
+      if self._sp_lead_a.x < 0.05:  # snap on first appearance, smooth afterwards
+        self._sp_lead_x.x, self._sp_lead_y.x, self._sp_lead_d.x = x, y, lead.dRel
+      self._sp_lead_x.update(x)
+      self._sp_lead_y.update(y)
+      self._sp_lead_d.update(lead.dRel)
+    self._sp_lead_a.update(1.0 if show else 0.0)
+    a = int(255 * min(max(self._sp_lead_a.x, 0.0), 1.0))
+    if a < 5:
+      return
+    from openpilot.system.ui.lib.application import FontWeight
+    font = gui_app.font(FontWeight.BOLD)
+    txt = f"{max(self._sp_lead_d.x, 0.0):.0f} m"
+    fs = 40
+    m = rl.measure_text_ex(font, txt, fs, 0)
+    cx = self._rect.x + self._sp_lead_x.x
+    ty = self._rect.y + self._sp_lead_y.x + 6
+    ty = min(ty, self._rect.y + self._rect.height - m.y - 6)  # keep on screen
+    cx = min(max(cx, self._rect.x + m.x / 2 + 8), self._rect.x + self._rect.width - m.x / 2 - 8)
+    rl.draw_rectangle_rounded(rl.Rectangle(cx - m.x / 2 - 8, ty - 2, m.x + 16, m.y + 4), 0.5, 8, rl.Color(0, 0, 0, int(a * 0.55)))
+    rl.draw_text_ex(font, txt, rl.Vector2(cx - m.x / 2, ty), fs, 0, rl.Color(255, 255, 255, a))
 
   def _draw_lead_indicator(self):
     # Draw lead vehicles if available

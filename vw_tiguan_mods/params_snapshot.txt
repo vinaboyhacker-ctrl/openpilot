@@ -1,0 +1,12 @@
+Mads=1
+MadsMainCruiseAllowed=1
+MadsUnifiedEngagementMode=1
+MadsSteeringMode=0
+CustomAccIncrementsEnabled=1
+CustomAccShortPressIncrement=1
+CustomAccLongPressIncrement=5
+LongitudinalPersonality=0
+ExperimentalMode=1
+DynamicExperimentalControl=1
+AlphaLongitudinalEnabled=1
+DisengageOnAccelerator=0

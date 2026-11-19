@@ -170,6 +170,7 @@ class SelfdriveD(CruiseHelper):
 
     self.events_sp = EventsSP()
     self.events_sp_prev = []
+    self.danger_frames = 0  # SP: dem khung TTC nguy hiem
 
     self.mads = ModularAssistiveDrivingSystem(self)
     self.icbm = IntelligentCruiseButtonManagement(self.CP, self.CP_SP)
@@ -454,6 +455,17 @@ class SelfdriveD(CruiseHelper):
     planner_fcw = self.sm['longitudinalPlan'].fcw and self.enabled
     if (planner_fcw or model_fcw) and not self.CP.notCar:
       self.events.add(EventName.fcw)
+
+    # SP: canh bao PHANH NGAY theo TTC (chi am thanh/hien thi, khong dieu khien xe)
+    danger = False
+    lead = self.sm['radarState'].leadOne
+    if lead.status and lead.vRel < -1.0 and CS.vEgo > 3.0 and not CS.brakePressed:
+      ttc = lead.dRel / -lead.vRel
+      braking_enough = self.enabled and self.sm['longitudinalPlan'].aTarget < -2.0
+      danger = ttc < 2.5 and not braking_enough
+    self.danger_frames = self.danger_frames + 1 if danger else 0
+    if self.danger_frames * DT_CTRL >= 0.3 and not self.CP.notCar:
+      self.events_sp.add(custom.OnroadEventSP.EventName.dangerBrake)
 
     # GPS checks
     gps_ok = self.sm.recv_frame[self.gps_location_service] > 0 and (self.sm.frame - self.sm.recv_frame[self.gps_location_service]) * DT_CTRL < 2.0

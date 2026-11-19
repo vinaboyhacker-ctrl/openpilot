@@ -187,7 +187,11 @@ class DeveloperLayoutMici(NavScroller):
 
   def _on_alpha_long_enabled(self, state: bool):
     def do_toggle(_state: bool):
-      ui_state.params.put_bool("AlphaLongitudinalEnabled", _state, block=True)
+      try:
+        from openpilot.sunnypilot.system.pending_params import set_target_bool
+        set_target_bool(ui_state.params, "AlphaLongitudinalEnabled", _state)  # SP: deferred while onroad
+      except Exception:
+        ui_state.params.put_bool("AlphaLongitudinalEnabled", _state, block=True)
       restart_needed_callback()
       self._update_toggles()
 

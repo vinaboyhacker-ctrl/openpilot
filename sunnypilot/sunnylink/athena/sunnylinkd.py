@@ -239,6 +239,16 @@ def saveParams(params_to_update: dict[str, str], compression: bool = False) -> N
       cloudlog.warning(f"sunnylinkd.saveParams.blocked: Attempted to modify blocked parameter '{key}'")
       continue
 
+    # SP: startup-only params are deferred while onroad (avoid Cruise Fault), applied by manager offroad
+    try:
+      from openpilot.sunnypilot.system import pending_params as pp
+      if key in pp.KEYS and pp.is_onroad(params):
+        pp.defer(key, "b64", [value, compression])
+        cloudlog.warning(f"sunnylinkd.saveParams.deferred: '{key}' will apply after the car restarts")
+        continue
+    except Exception as e:
+      cloudlog.error(f"sunnylinkd.saveParams.defer_exception {e}")
+
     try:
       save_param_from_base64_encoded_string(key, value, compression)
     except Exception as e:

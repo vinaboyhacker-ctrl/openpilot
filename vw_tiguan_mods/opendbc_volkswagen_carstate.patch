@@ -1,0 +1,28 @@
+diff --git a/opendbc/car/volkswagen/carstate.py b/opendbc/car/volkswagen/carstate.py
+index 5eb8e04d..851cce90 100644
+--- a/opendbc/car/volkswagen/carstate.py
++++ b/opendbc/car/volkswagen/carstate.py
+@@ -1,3 +1,4 @@
++import time
+ from opendbc.can import CANParser
+ from opendbc.car import Bus, structs
+ from opendbc.car.interfaces import CarStateBase
+@@ -23,9 +24,15 @@ class CarState(CarStateBase):
+   def update_button_enable(self, buttonEvents: list[structs.CarState.ButtonEvent]):
+     if not self.CP.pcmCruise:
+       for b in buttonEvents:
+-        # Enable OP long on falling edge of enable buttons
+-        if b.type in (ButtonType.setCruise, ButtonType.resumeCruise) and not b.pressed:
+-          return True
++        if b.type in (ButtonType.setCruise, ButtonType.resumeCruise):
++          if b.pressed:
++            self._sp_enable_press_t = time.monotonic()
++          else:
++            # SP: giu SET/RES >= 0.8s la thao tac doi che do -> khong engage khi nha
++            held = time.monotonic() - getattr(self, '_sp_enable_press_t', time.monotonic())
++            if held < 0.8:
++              # Enable OP long on falling edge of enable buttons
++              return True
+     return False
+ 
+   def create_button_events(self, pt_cp, buttons):

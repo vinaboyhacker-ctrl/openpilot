@@ -39,6 +39,7 @@ class SpeedLimitRendererMici(SpeedLimitRenderer):
       pass
 
   def _render(self, rect: rl.Rectangle):
+    return
     if ui_state.speed_limit_mode == SpeedLimitMode.off and self.cam_limit <= 0:
       return
 

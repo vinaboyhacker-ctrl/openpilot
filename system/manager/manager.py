@@ -145,10 +145,21 @@ def manager_thread() -> None:
   started_prev = False
   ignition_prev = False
 
+  # SP: apply settings saved while onroad, before card reads CarParams
+  def sp_apply_pending():
+    try:
+      from openpilot.sunnypilot.system.pending_params import apply_pending
+      apply_pending(params)
+    except Exception:
+      cloudlog.exception("sp_apply_pending failed")
+  sp_apply_pending()
+
   while True:
     sm.update(1000)
 
     started = sm['deviceState'].started
+    if not started:
+      sp_apply_pending()
 
     if started and not started_prev:
       params.clear_all(ParamKeyFlag.CLEAR_ON_ONROAD_TRANSITION)

@@ -26,6 +26,12 @@ EVENT_NAME_SP = {v: k for k, v in EventNameSP.schema.enumerants.items()}
 IS_MICI = HARDWARE.get_device_type() == 'mici'
 
 
+def mode_switched_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
+  # SP: hien thi che do vua chon bang nut giu SET/RES (xem cruise_helpers.SWITCH_MSG)
+  from openpilot.sunnypilot.selfdrive.car import cruise_helpers
+  return NormalPermanentAlert(cruise_helpers.SWITCH_MSG or "Experimental Mode Switched", duration=2.0)
+
+
 def speed_limit_adjust_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.SubMaster, metric: bool, soft_disable_time: int, personality) -> Alert:
   speedLimit = sm['longitudinalPlanSP'].speedLimit.resolver.speedLimit
   speed = round(speedLimit * (CV.MS_TO_KPH if metric else CV.MS_TO_MPH))
@@ -81,7 +87,7 @@ def carrot_navi_camera_alert(CP: car.CarParams, CS: car.CarState, sm: messaging.
   return Alert(
     f"{descr}: {limit_str}{dist_str}",
     "",
-    AlertStatus.normal, AlertSize.small,
+    AlertStatus.normal, AlertSize.none,
     Priority.LOWER, VisualAlert.none, AudibleAlert.none, .2)
 
 
@@ -194,7 +200,7 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   EventNameSP.experimentalModeSwitched: {
-    ET.WARNING: NormalPermanentAlert("Experimental Mode Switched", duration=1.5)
+    ET.WARNING: mode_switched_alert,
   },
 
   EventNameSP.wrongCarModeAlertOnly: {
@@ -259,5 +265,14 @@ EVENTS_SP: dict[int, dict[str, Alert | AlertCallbackType]] = {
 
   EventNameSP.carrotNaviCamera: {
     ET.PERMANENT: carrot_navi_camera_alert,
+  },
+
+  # SP: canh bao nguy hiem - chi chu + am thanh, khong gui VisualAlert xuong xe
+  EventNameSP.dangerBrake: {
+    ET.PERMANENT: Alert(
+      "PHANH NGAY",
+      "Nguy co va cham",
+      AlertStatus.critical, AlertSize.full,
+      Priority.HIGHEST, VisualAlert.none, AudibleAlert.warningImmediate, .2),
   },
 }

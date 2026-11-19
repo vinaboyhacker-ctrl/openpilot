@@ -1,0 +1,66 @@
+=== GIAI MA RADAR VW TIGUAN MK2 (MQB) – TIEN DO ===
+Quy tac: chi doc, KHONG gui CAN/UDS, KHONG sua opendbc/panda/controls/planner, KHONG doi cai dat.
+
+[2026-11-19] Buoc 0 – XONG
+- 36 chuyen con rlog. Da hard-link rlog+qlog (khong ton them dung luong, khong bi deleter xoa):
+  /data/backup_radar/logs/00000030--ce496a4510--* (65 doan, 687MB, 16/11, co AEB doan 58)
+  /data/backup_radar/logs/00000031--0503ba5465--* (81 doan, 854MB, 16/11)
+- /data con 8.9GB trong (90%).
+
+[2026-11-19] Buoc 1 – XONG (doan 30--58, sunnypilot dieu khien long)
+- Bus: 0=Extended CAN phia gateway, 1=Powertrain, 2=Extended CAN phia camera/radar.
+- Bus 2: 41 ID, 14 co trong DBC (ACC_02/04/06/07/10/13/15, SWA_01, RCTA_01, LDW_02...), 27 la.
+  ID 11-bit la tren bus 2: 0x181 0x29C (5Hz), 0x2AC (3.5Hz), 0x313 0x314 0x315 (16.7Hz = nhip radar,
+  giong ACC_02/04), 0x322 (25Hz), 0x326 0x327 0x328 0x329 (12.5Hz = nhip camera, giong Kamera_Status),
+  0x460 (5Hz), 0x48A (10Hz). Con lai la 29-bit (chan doan/TP, bo qua).
+- comma gui: ACC_02/06/07, HCA_01, LDW_02 (bus0), LH_EPS_03 (bus2). KHONG thay the 0x313-0x329.
+- Ket luan: tin nhan nghi la vat the radar/camera NAM TREN BUS 2, comma DOC DUOC. Khong can phan cung them.
+- Ket qua day du: /data/backup_radar/bus_survey_seg58.txt ; script: /data/backup_radar/bus_survey.py
+
+[2026-11-19] Buoc 2 – XONG phan phan tich so bo (14 doan chuyen 30: 52,49,43,42,19,20,38,36,40,39,37,47,54,58)
+- Tuong quan tho (khong tach mux): moi ID |r| <= 0.38 -> khong co truong "dRel" don gian.
+- ACC_02 (Abstandsindex, Relevantes_Objekt) va ACC_04 (Abstand_Abstandswarner) tren bus 2:
+  gan nhu HANG SO (1-2 gia tri) -> radar KHONG dien khoang cach vao day khi ACC goc khong chay
+  (xe dang alpha long). Can chuyen ACC goc de kiem tra lai.
+- 0x313/0x314/0x315 (16.7Hz) = NGHI LA DANH SACH VAT THE RADAR:
+  * moi tin 2 nua 4 byte, header o byte1 va byte5.
+  * header 0x81 = o trong. Cac gia tri khac: 0x313: 04/06/08/0A, 0x314: 0C/0E/10/12,
+    0x315: 14/16/18/1A (bit7 bat/tat luan phien) -> ~12 o vat the, chi so = (header>>1)&0x3F.
+  * Tach theo header: |r| voi dRel len 0.53-0.73 (vd 0x314 byte5=0x12: r=-0.73;
+    0x315 byte1=0x16: r=-0.63). Chua tim ra truong vRel (|r|<0.4).
+  * He so am / offset la -> chua biet ma hoa (co the do o vat the khong luon la xe truoc).
+- 0x326/0x327/0x329 (12.5Hz): nhieu entropy, nghi la vat the CAMERA (fusion). |r|~0.33. 0x328, 0x460, 0x181, 0x29C gan hang so.
+- 0x2AC (3.5Hz) |r|~0.38, chua ro.
+- Khac biet ACC xe / sunnypilot: chuyen 30 KHONG co doan ACC goc (alpha long bat). comma KHONG gui
+  0x313-0x315/0x326-0x329 -> khong chan/thay; radar van phat khi sunnypilot dieu khien.
+- File: corr_30.txt, demux_30.txt, corr_<ID>.npz (du lieu tho da can thoi gian voi leadOne).
+
+[2026-11-19] Buoc 3 – KET LUAN
+- DANG LAM TIEP: radar phat danh sach vat the tren bus 2, comma doc duoc, khong can phan cung them.
+- Tien do (uoc): giai doan 0 = 100%, giai doan 1 (giai ma) ~30%, tong du an ~15%.
+- Viec tiep (chi phan tich log): giai ma cau truc o vat the 0x313-0x315 (truong nao la khoang
+  cach doc/ngang, toc do tuong doi, do tin cay), chon o "khop nhat" voi leadOne moi thoi diem.
+- CAN GHI THEM KHI RA XE (khong gui gi vao xe, chi lai):
+  1) Dau sau xe dung yen, khoang cach DO BANG THUOC: 5m, 10m, 20m, 30m (moi muc 20s).
+  2) Theo xe truoc on dinh 40-60 km/h, 2-3 phut, it xe xung quanh.
+  3) Tien lai gan xe dang dung tu 50m den 10m cham deu (de co vRel ro).
+  4) Xe khac chen lan / tach lan (kiem tra o vat the doi chi so).
+  5) 1 chuyen voi ACC GOC (tat AlphaLongitudinal - viec doi cai dat do chu xe quyet dinh)
+     de xem ACC_02/ACC_04 co dien khoang cach khong.
+
+[2026-11-19] Buoc 4 – giai ma o vat the 0x313-0x315 (chi phan tich log)
+- Mau tho (doan 58, tien gan xe truoc 27m->7m): 0x313/0x314 TRONG (FF 81 FF FF ...), chi 0x315 o 0x16 co
+  vat the; byte2 tang deu 8A->B5 (~7/s) khi khoang cach giam. Luc AEB (35.3s) moi xuat hien them vat the
+  o 0x313 (B4 06 36 C0) va 0x315 nua sau (B1 18 45 70).
+- 91 track (>=2s), track dai toi 120s. Do moi nhom bit 6-16 bit, LE/BE, co/khong dau, tren 25 track co xe
+  truoc: KHONG co truong nao nhat quan (|r| trung vi 0.48, chi 72% track cung dau) -> o vat the KHONG
+  thuong xuyen la xe truoc cua camera, hoac du lieu chua du.
+- NHAN DINH QUAN TRONG: values.py:34 ghi "NetworkLocation.fwdCamera: radar-camera object fusion CAN".
+  Xe dang lap kieu GATEWAY (J533). Danh sach vat the day du nhieu kha nang nam tren CAN RIENG giua radar
+  va camera, comma KHONG thay o kieu lap gateway. 0x313-0x315 co the chi la vai vat the chia se len
+  Extended CAN (vd cho SWA/RCTA/AWV), it vat the (toi da ~3 cung luc).
+- Phan cung co the can (CHI NEU): harness kieu camera (fwdCamera) de bus 1 = fusion CAN, hoac thiet bi
+  doc CAN thu 2 kep vao day CAN rieng radar-camera. Truoc khi mua: xac nhan bang du lieu ngay mai.
+- Ngay mai: sau khi tat may chay  sh /data/backup_radar/run_all.sh  (tu lay chuyen moi nhat, hard-link log,
+  chay ca chuoi phan tich). Kich ban lai: xem Buoc 3. Ghi lai GIO (hh:mm:ss) bat dau moi kich ban.
+- Tien do: giai doan 1 ~40%. Tong du an ~15-20% (phu thuoc ket qua ngay mai).

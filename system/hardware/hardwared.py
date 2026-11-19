@@ -206,7 +206,14 @@ def hardware_thread(end_event, hw_queue) -> None:
     # handle requests to cycle system started state
     if params.get_bool("OnroadCycleRequested"):
       params.put_bool("OnroadCycleRequested", False, block=True)
-      offroad_cycle_count = sm.frame
+      # SP: never cycle while onroad: restarting card with the car running -> accFaulted (Cruise Fault)
+      # settings take effect on the next drive instead (see sunnypilot/system/pending_params.py)
+      try:
+        sp_onroad = params.get_bool("IsOnroad")
+      except Exception:
+        sp_onroad = False
+      if not sp_onroad:
+        offroad_cycle_count = sm.frame
     onroad_conditions["not_onroad_cycle"] = (sm.frame - offroad_cycle_count) >= ONROAD_CYCLE_TIME * SERVICE_LIST['pandaStates'].frequency
 
     if sm.updated['pandaStates'] and len(pandaStates) > 0:

@@ -7,6 +7,7 @@ from openpilot.selfdrive.ui.mici.onroad import SIDE_PANEL_WIDTH
 from openpilot.selfdrive.ui.mici.onroad.alert_renderer import AlertRenderer
 from openpilot.selfdrive.ui.mici.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
+from openpilot.selfdrive.ui.sunnypilot.mici.onroad.long_border import LongBorder
 from openpilot.selfdrive.ui.mici.onroad.model_renderer import ModelRenderer
 from openpilot.selfdrive.ui.mici.onroad.confidence_ball import ConfidenceBall
 from openpilot.selfdrive.ui.mici.onroad.cameraview import CameraView
@@ -152,6 +153,7 @@ class AugmentedRoadView(CameraView):
 
     self._model_renderer = ModelRenderer()
     self._hud_renderer = HudRenderer()
+    self._long_border = LongBorder()
     self._alert_renderer = AlertRenderer()
     self._driver_state_renderer = DriverStateRenderer()
     self._confidence_ball = ConfidenceBall()
@@ -233,6 +235,8 @@ class AugmentedRoadView(CameraView):
     self._hud_renderer.set_wheel_critical_icon(alert_to_render is not None and not not_animating_out and
                                                alert_to_render.visual_alert == car.CarControl.HUDControl.VisualAlert.steerRequired)
     self._alert_renderer.render(self._content_rect)
+    self._long_border.update()
+    self._long_border.render(self._content_rect)
     self._hud_renderer.render(self._content_rect)
 
     # Draw fake rounded border

@@ -19,6 +19,7 @@ IMPERIAL_INCREMENT = round(CV.MPH_TO_KPH, 1)  # round here to avoid rounding err
 ButtonEvent = car.CarState.ButtonEvent
 ButtonType = car.CarState.ButtonEvent.Type
 CRUISE_LONG_PRESS = 50
+SP_SET_RES_SHORT_PRESS = 50  # SP: SET/RES nhan ngan < 0.5s @ 100Hz
 CRUISE_NEAREST_FUNC = {
   ButtonType.accelCruise: math.ceil,
   ButtonType.decelCruise: math.floor,
@@ -78,6 +79,12 @@ class VCruiseHelper(VCruiseHelperSP):
     if not enabled:
       return
 
+    # SP: SET/RES nhan ngan khi dang engage -> -1 / +1 (giong VW goc)
+    try:
+      self._sp_update_set_res_short_press(CS, is_metric)
+    except Exception:
+      pass
+
     long_press = False
     button_type = None
 
@@ -126,7 +133,53 @@ class VCruiseHelper(VCruiseHelperSP):
 
     self.v_cruise_kph = np.clip(round(self.v_cruise_kph, 1), self.v_cruise_min, V_CRUISE_MAX)
 
+  def _sp_update_set_res_short_press(self, CS, is_metric):
+    # SP: chi xu ly khi NHA nut, nhan < SP_SET_RES_SHORT_PRESS va da engage tu luc nhan xuong.
+    # Nhan giu (>= 0.5s) de danh cho doi che do (cruise_helpers, ~1s) -> khong doi toc do.
+    timers = getattr(self, '_sp_setres_timers', None)
+    if not timers or not self.v_cruise_initialized:
+      return
+    for b in CS.buttonEvents:
+      bt = b.type.raw
+      if bt not in timers or b.pressed:
+        continue
+      held, enabled_at_press, standstill_at_press = timers[bt]
+      if held <= 0 or held >= SP_SET_RES_SHORT_PRESS or not enabled_at_press:
+        continue
+      if bt == ButtonType.resumeCruise and (standstill_at_press or CS.cruiseState.standstill):
+        continue  # RES khi dung han = di tiep, khong cong toc do
+      # Speed Limit Assist dang cho xac nhan -> khong doi toc do (SET ~ -, RES ~ +)
+      sla_type = ButtonType.decelCruise if bt == ButtonType.setCruise else ButtonType.accelCruise
+      if self.update_speed_limit_assist_pre_active_confirmed(sla_type):
+        continue
+      delta = 1. if is_metric else IMPERIAL_INCREMENT
+      sign = -1 if bt == ButtonType.setCruise else +1
+      v = self.v_cruise_kph + sign * delta
+      if CS.gasPressed and bt == ButtonType.setCruise:
+        v = max(v, CS.vEgo * CV.MS_TO_KPH)  # giong nut -: dang dap ga thi khong dat thap hon toc do xe
+      self.v_cruise_kph = np.clip(round(v, 1), self.v_cruise_min, V_CRUISE_MAX)
+
+  def _sp_update_set_res_timers(self, CS, enabled):
+    if not hasattr(self, '_sp_setres_timers'):
+      self._sp_setres_timers = {ButtonType.setCruise: [0, False, False], ButtonType.resumeCruise: [0, False, False]}
+    timers = self._sp_setres_timers
+    for k in timers:
+      if timers[k][0] > 0:
+        timers[k][0] += 1
+    for b in CS.buttonEvents:
+      if b.type.raw in timers:
+        if b.pressed:
+          timers[b.type.raw] = [1, bool(enabled), bool(CS.cruiseState.standstill)]
+        else:
+          timers[b.type.raw][0] = 0  # da xu ly o _sp_update_set_res_short_press truoc do
+
   def update_button_timers(self, CS, enabled):
+    # SP: bo dem rieng cho SET/RES nhan ngan
+    try:
+      self._sp_update_set_res_timers(CS, enabled)
+    except Exception:
+      pass
+
     # increment timer for buttons still pressed
     for k in self.button_timers:
       if self.button_timers[k] > 0:

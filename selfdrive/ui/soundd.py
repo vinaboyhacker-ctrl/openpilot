@@ -63,6 +63,18 @@ if HARDWARE.get_device_type() == "tizi":
     AudibleAlert.disengage: ("disengage_tizi.wav", 1, MAX_VOLUME),
   })
 
+# SP: am thanh bao hieu phat chong len, khong ngat canh bao chinh
+OVERLAY_SOUNDS = {"ting": "prompt_single_high.wav", "ting_ting": "ting_ting.wav"}
+CHIME_BRAKE_ACCEL = -1.0     # m/s^2, bat dau giam toc dang ke
+CHIME_BRAKE_REARM = -0.5     # m/s^2, cho phep bao lai khi aTarget tren muc nay
+CHIME_DECEL_MIN = -0.3       # m/s^2, doi nguon chi tinh khi dang giam toc
+CHIME_BRAKE_COOLDOWN = 5.0   # s
+LEAD_GONE_TIME = 1.0         # s, xe truoc phai mat >= 1s moi tinh la xuat hien moi
+CARROT_POINT_ACTIVE = (3, 4, 5)  # camera, doan do toc do, go giam toc
+CARROT_RESET_TIME = 3.0      # s
+LEAD_SOURCES = ("lead0", "lead1", "lead2")
+
+
 def check_selfdrive_timeout_alert(sm):
   ss_missing = time.monotonic() - sm.recv_time['selfdriveState']
 
@@ -90,6 +102,18 @@ class Soundd(QuietMode):
 
     self.spl_filter_weighted = FirstOrderFilter(0, 2.5, FILTER_DT, initialized=False)
 
+    # SP: trang thai am thanh bao hieu
+    self.overlay: str | None = None
+    self.overlay_frame = 0
+    self.lead_present = False
+    self.lead_last_seen = 0.
+    self.brake_armed = True
+    self.prev_decel_key: str | None = None
+    self.last_brake_chime = 0.
+    self.carrot_prev_type: int | None = None
+    self.carrot_prev_dist = 0
+    self.carrot_last_active = 0.
+
   def load_sounds(self):
     self.loaded_sounds: dict[int, np.ndarray] = {}
 
@@ -104,6 +128,15 @@ class Soundd(QuietMode):
 
         length = wavefile.getnframes()
         self.loaded_sounds[sound] = np.frombuffer(wavefile.readframes(length), dtype=np.int16).astype(np.float32) / (2**16/2)
+
+    self.overlay_sounds: dict[str, np.ndarray] = {}
+    for name, filename in OVERLAY_SOUNDS.items():
+      with wave.open(BASEDIR + "/selfdrive/assets/sounds/" + filename, 'r') as wavefile:
+        assert wavefile.getnchannels() == 1
+        assert wavefile.getsampwidth() == 2
+        assert wavefile.getframerate() == SAMPLE_RATE
+        length = wavefile.getnframes()
+        self.overlay_sounds[name] = np.frombuffer(wavefile.readframes(length), dtype=np.int16).astype(np.float32) / (2**16/2)
 
   def get_sound_data(self, frames): # get "frames" worth of data from the current alert sound, looping when required
 
@@ -123,6 +156,18 @@ class Soundd(QuietMode):
         ret[written_frames:written_frames+frames_to_write] = sound_data[current_sound_frame:current_sound_frame+frames_to_write]
         written_frames += frames_to_write
         self.current_sound_frame += frames_to_write
+
+    # SP: tron am thanh bao hieu
+    ov = self.overlay
+    if ov is not None:
+      data = self.overlay_sounds[ov]
+      n = min(frames, len(data) - self.overlay_frame)
+      if n > 0:
+        ret[:n] += data[self.overlay_frame:self.overlay_frame + n]
+        self.overlay_frame += n
+      if self.overlay_frame >= len(data):
+        self.overlay = None
+      np.clip(ret, -1., 1., out=ret)
 
     return ret * self.current_volume
 
@@ -151,6 +196,59 @@ class Soundd(QuietMode):
       self.update_alert(AudibleAlert.none)
       self.selfdrive_timeout_alert = False
 
+  def play_overlay(self, name: str) -> None:
+    if self.enabled:  # QuietMode: tat am thanh bao hieu
+      return
+    self.overlay_frame = 0
+    self.overlay = name
+
+  def update_chimes(self, sm) -> None:
+    now = time.monotonic()
+
+    # 1a) xe phia truoc moi xuat hien
+    if sm.updated['longitudinalPlan']:
+      lp = sm['longitudinalPlan']
+      if lp.hasLead:
+        if not self.lead_present:
+          self.play_overlay("ting")
+        self.lead_present = True
+        self.lead_last_seen = now
+      elif now - self.lead_last_seen > LEAD_GONE_TIME:
+        self.lead_present = False
+
+      # 2) openpilot bat dau giam toc dang ke
+      sp = sm['longitudinalPlanSP']
+      a_target = float(lp.aTarget)
+      decel_key = None
+      if a_target < CHIME_DECEL_MIN:
+        if str(lp.longitudinalPlanSource) in LEAD_SOURCES:
+          decel_key = "lead"
+        elif str(sp.longitudinalPlanSource) == "carrotNavi":
+          decel_key = "turn" if sp.carrotNavi.source == "turn" else "carrot"
+      if a_target > CHIME_BRAKE_REARM:
+        self.brake_armed = True
+      strong = a_target < CHIME_BRAKE_ACCEL and self.brake_armed
+      new_src = decel_key is not None and decel_key != self.prev_decel_key
+      if sp.carrotNavi.longActive and (strong or new_src) and now - self.last_brake_chime >= CHIME_BRAKE_COOLDOWN:
+        self.play_overlay("ting_ting")
+        self.last_brake_chime = now
+        self.brake_armed = False
+      self.prev_decel_key = decel_key
+
+    # 1b) Carrot: gap camera / doan do toc do / go giam toc moi (moi diem 1 lan)
+    if sm.updated['carrotManSP']:
+      cm = sm['carrotManSP']
+      if cm.connected and cm.active in CARROT_POINT_ACTIVE and cm.spdDist > 0:
+        new_point = self.carrot_prev_type != cm.spdType or cm.spdDist > self.carrot_prev_dist + 100
+        if new_point:
+          self.play_overlay("ting")
+        self.carrot_prev_type = int(cm.spdType)
+        self.carrot_prev_dist = int(cm.spdDist)
+        self.carrot_last_active = now
+      elif now - self.carrot_last_active > CARROT_RESET_TIME:
+        self.carrot_prev_type = None
+        self.carrot_prev_dist = 0
+
   def calculate_volume(self, weighted_db):
     volume = ((weighted_db - AMBIENT_DB) / DB_SCALE) * (MAX_VOLUME - MIN_VOLUME) + MIN_VOLUME
     return math.pow(VOLUME_BASE, (np.clip(volume, MIN_VOLUME, MAX_VOLUME) - 1))
@@ -166,7 +264,8 @@ class Soundd(QuietMode):
     # sounddevice must be imported after forking processes
     import sounddevice as sd
 
-    sm = messaging.SubMaster(['selfdriveState', 'selfdriveStateSP', 'soundPressure'])
+    sm = messaging.SubMaster(['selfdriveState', 'selfdriveStateSP', 'soundPressure',
+                              'longitudinalPlan', 'longitudinalPlanSP', 'carrotManSP'])
 
     with self.get_stream(sd) as stream:
       rk = Ratekeeper(20)
@@ -183,6 +282,10 @@ class Soundd(QuietMode):
           self.current_volume = self.calculate_volume(float(self.spl_filter_weighted.x))
 
         self.get_audible_alert(sm)
+        try:
+          self.update_chimes(sm)
+        except Exception:
+          cloudlog.exception("soundd: update_chimes failed")
 
         # Ramp up immediate warning sound over 4s
         if self.current_alert == AudibleAlert.warningImmediate:

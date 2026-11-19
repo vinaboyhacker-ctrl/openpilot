@@ -20,3 +20,6 @@ if [ -z "$AGNOS_VERSION" ]; then
 fi
 
 export STAGING_ROOT="/data/safe_staging"
+export STREAM=1
+export STREAM_QUALITY=100
+export STREAM_FPS=20
