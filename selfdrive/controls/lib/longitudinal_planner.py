@@ -22,6 +22,13 @@ A_CRUISE_MAX_BP = [0., 10.0, 25., 40.]
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
+# SP Tiguan 20/11 (chu xe dong y): A = gioi han ga khi bam xe truoc, B = cat ga khi xe truoc cham lai
+SP_LEAD_ACCEL_DIST = (40.0, 60.0, 80.0)  # m: <40 m ga toi da 0.5, 60 m: 1.0, >80 m khong gioi han (noi suy muot)
+SP_LEAD_ACCEL_MAX = (0.5, 1.0)  # m/s^2 tai 40 m va 60 m
+SP_CLOSING_VREL = -1.0         # m/s: xe truoc cham hon minh qua muc nay -> cat ga
+SP_CLOSING_MIN_DIST = 30.0     # m
+SP_CLOSING_TGAP = 4.0          # s: chi xet khi xe truoc trong max(30 m, 4 s * v)
+SP_CLOSING_HOLD = 1.0          # s: giu cat ga them sau khi het dieu kien (chong nhieu camera)
 
 # Lookup table for turns
 _A_TOTAL_MAX_V = [1.7, 3.2]
@@ -173,6 +180,28 @@ class LongitudinalPlanner(LongitudinalPlannerSP):
       accel_clip[idx] = np.clip(accel_clip[idx], self.prev_accel_clip[idx] - 0.05, self.prev_accel_clip[idx] + 0.05)
     self.output_a_target = np.clip(output_a_target, accel_clip[0], accel_clip[1])
     self.prev_accel_clip = accel_clip
+
+    # SP: chi giam GA (khong bao gio giam phanh)
+    try:
+      self._sp_limit_lead_throttle(sm, v_ego)
+    except Exception:
+      pass
+
+  def _sp_limit_lead_throttle(self, sm, v_ego):
+    hold = getattr(self, '_sp_closing_hold', 0.0)
+    lead = sm['radarState'].leadOne
+    if lead.status:
+      if lead.vRel < SP_CLOSING_VREL and lead.dRel < max(SP_CLOSING_MIN_DIST, SP_CLOSING_TGAP * v_ego):
+        hold = SP_CLOSING_HOLD
+    else:
+      hold = 0.0
+    if self.output_a_target > 0.0:
+      if hold > 0.0:
+        self.output_a_target = 0.0                                          # B
+      elif lead.status:
+        a_max = float(np.interp(lead.dRel, SP_LEAD_ACCEL_DIST, [SP_LEAD_ACCEL_MAX[0], SP_LEAD_ACCEL_MAX[1], ACCEL_MAX]))
+        self.output_a_target = min(self.output_a_target, a_max)              # A
+    self._sp_closing_hold = max(0.0, hold - self.dt)
 
   def publish(self, sm, pm):
     plan_send = messaging.new_message('longitudinalPlan')
